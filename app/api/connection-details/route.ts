@@ -3,8 +3,8 @@ import { ConnectionDetails } from '@/lib/types';
 import { AccessToken, AccessTokenOptions, VideoGrant } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_KEY = process.env.LIVEKIT_API_KEY;
-const API_SECRET = process.env.LIVEKIT_API_SECRET;
+const API_KEY = process.env.LIVEKIT_API_KEY || 'APIvDxJrJtA2mqn';
+const API_SECRET = process.env.LIVEKIT_API_SECRET || 'fB02fZZINPTEVYt76DlQSDfYe2flUNVDvWBXefkHw4NH';
 const LIVEKIT_URL = process.env.LIVEKIT_URL;
 
 export async function GET(request: NextRequest) {
