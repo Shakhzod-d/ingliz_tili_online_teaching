@@ -4,7 +4,7 @@ import axios from 'axios';
 import Link from 'next/link';
 import { useState, useRef } from 'react';
 
-export default function RegisterForm() {
+export default function () {
   const [loading, setLoading] = useState<boolean>(false);
   const [role, setRole] = useState<string>('');
   const passwordRef = useRef<HTMLInputElement>(null);

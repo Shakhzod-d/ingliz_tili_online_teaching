@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 
-export default function SignIn() {
+export default function () {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
