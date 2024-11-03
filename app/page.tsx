@@ -2,6 +2,7 @@
 
 import axios from 'axios';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 export default function TeacherList() {
@@ -12,6 +13,8 @@ export default function TeacherList() {
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [comment, setComment] = useState<string>('');
   const [showModal, setShowModal] = useState<boolean>(false);
+
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,6 +45,17 @@ export default function TeacherList() {
   };
 
   const handleSubmit = async () => {
+    const token = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('authToken='))
+      ?.split('=')[1];
+
+    // Agar token mavjud bo'lmasa, foydalanuvchini sign-in sahifasiga yo'naltirish
+    if (!token) {
+      router.push('/auth/sign-in');
+      return;
+    }
+
     if (!selectedDay || !selectedTime) {
       alert('Please select a day and time.');
       return;

@@ -1,52 +1,36 @@
 'use client';
 
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useRef, useState } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
 
-export default function LoginForm() {
-  const [loading, setLoading] = useState<boolean>(false);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
-
+export default function SignIn() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/';
+
+  const [loading, setLoading] = useState<boolean>(false);
+  const emailRef = useRef<HTMLInputElement | any>(null);
+  const passwordRef = useRef<HTMLInputElement | any>(null);
 
   const fetchData = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Agar `emailRef` yoki `passwordRef` null bo'lsa, qaytish
-    if (!emailRef.current || !passwordRef.current) return;
-
-    // data
     const data = {
       email: emailRef.current.value,
       password: passwordRef.current.value,
     };
 
     try {
-      // API orqali ma'lumotlarni olish
-      const response = await axios.post('https://48b745c40cead56f.mokky.dev/auth', data);
-      const role = response.data.data.role;
-      const userId = response.data.data.id;
-
-      // Role ni localStorage ichiga saqlash
-      localStorage.setItem('role', role);
-
-      // Rolga qarab yo'naltirish
-      if (role === 'teacher') {
-        router.push(`/dashboard/teacher/${userId}`);
-      } else if (role === 'student') {
-        router.push(`/dashboard/student/${userId}`);
-      } else {
-        alert('Role not recognized');
-      }
-
-      alert('Success');
-    } catch (error) {
-      console.error(error);
-      alert((error as Error).message);
+      const req = await axios.post('https://48b745c40cead56f.mokky.dev/auth', data);
+      localStorage.setItem('role', req.data.data.role);
+      document.cookie = `authToken=${req.data.data.token}; path=/;`;
+      alert('Login successful');
+      router.push(redirectUrl); // Kirgandan so'ng foydalanuvchini oldingi sahifaga qaytarish
+    } catch (error: any) {
+      alert(error.message);
     } finally {
       setLoading(false);
     }
@@ -56,10 +40,8 @@ export default function LoginForm() {
     <form onSubmit={fetchData}>
       <input type="email" placeholder="Enter your email" required ref={emailRef} />
       <input type="password" placeholder="Enter your password" required ref={passwordRef} />
-      <button type="submit" disabled={loading}>
-        {loading ? 'Logging in...' : 'Login'}
-      </button>
-      <Link href="/auth/sign-up">Register</Link>
+      <button disabled={loading}>Login</button>
+      <Link href={'/auth/sign-up'}>Register</Link>
     </form>
   );
 }
