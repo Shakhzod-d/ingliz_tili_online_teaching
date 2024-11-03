@@ -1,201 +1,136 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import React, { Suspense, useState } from 'react';
-import { encodePassphrase, generateRoomId, randomString } from '@/lib/client-utils';
-import styles from '../styles/Home.module.css';
+import axios from 'axios';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
-function Tabs(props: React.PropsWithChildren<{}>) {
-  const searchParams = useSearchParams();
-  const tabIndex = searchParams?.get('tab') === 'custom' ? 1 : 0;
+export default function TeacherList() {
+  const [data, setData] = useState<any>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+  const [selectedDay, setSelectedDay] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [comment, setComment] = useState<string>('');
+  const [showModal, setShowModal] = useState<boolean>(false);
 
-  const router = useRouter();
-  function onTabSelected(index: number) {
-    const tab = index === 1 ? 'custom' : 'demo';
-    router.push(`/?tab=${tab}`);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get('https://48b745c40cead56f.mokky.dev/users');
+        const teachers = response.data.filter(
+          (item: { isActive: boolean; role: string }) => item.role === 'teacher' && item.isActive,
+        );
+        setData(teachers);
+      } catch (error) {
+        console.error(error);
+      }
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return <p>Loading...</p>;
   }
 
-  let tabs = React.Children.map(props.children, (child, index) => {
-    return (
-      <button
-        className="lk-button"
-        onClick={() => {
-          if (onTabSelected) {
-            onTabSelected(index);
-          }
-        }}
-        aria-pressed={tabIndex === index}
-      >
-        {/* @ts-ignore */}
-        {child?.props.label}
-      </button>
-    );
-  });
+  const handleBuy = (teacher: any) => {
+    setSelectedTeacher(teacher);
+    setSelectedDay('');
+    setSelectedTime('');
+    setComment('');
+    setShowModal(true);
+  };
 
-  return (
-    <div className={styles.tabContainer}>
-      <div className={styles.tabSelect}>{tabs}</div>
-      {/* @ts-ignore */}
-      {props.children[tabIndex]}
-    </div>
-  );
-}
+  const handleSubmit = async () => {
+    if (!selectedDay || !selectedTime) {
+      alert('Please select a day and time.');
+      return;
+    }
 
-function DemoMeetingTab(props: { label: string }) {
-  const router = useRouter();
-  const [e2ee, setE2ee] = useState(false);
-  const [sharedPassphrase, setSharedPassphrase] = useState(randomString(64));
-  const startMeeting = () => {
-    if (e2ee) {
-      router.push(`/rooms/${generateRoomId()}#${encodePassphrase(sharedPassphrase)}`);
-    } else {
-      router.push(`/rooms/${generateRoomId()}`);
+    const lessonData = {
+      studentId: 2, // This should be dynamically retrieved
+      day: selectedDay,
+      time: selectedTime,
+      status: 'new',
+      comment,
+      lessonStatus: 'not started',
+      isAccepted: 'new',
+      lessonId: selectedTeacher.lessons.length + 1, // Increment lessonId based on existing lessons
+    };
+
+    try {
+      await axios.patch(`https://48b745c40cead56f.mokky.dev/users/${selectedTeacher.id}`, {
+        lessons: [...selectedTeacher.lessons, lessonData],
+      });
+      alert('Lesson booked successfully');
+      setShowModal(false);
+    } catch (error) {
+      console.error(error);
+      alert('Error booking lesson');
     }
   };
+
   return (
-    <div className={styles.tabContent}>
-      <p style={{ margin: 0 }}>Try LiveKit Meet for free with our live demo project.</p>
-      <button style={{ marginTop: '1rem' }} className="lk-button" onClick={startMeeting}>
-        Start Meeting
-      </button>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
-          <input
-            id="use-e2ee"
-            type="checkbox"
-            checked={e2ee}
-            onChange={(ev) => setE2ee(ev.target.checked)}
-          ></input>
-          <label htmlFor="use-e2ee">Enable end-to-end encryption</label>
+    <div>
+      {data.map((item: any) => (
+        <div key={item.id}>
+          <h2>{item.name}</h2>
+          <p>{item.description}</p>
+          <p>Price: {item.price}</p>
+          <p>Rate: {item.rates}</p>
+          <button onClick={() => handleBuy(item)}>Buy</button>
+          <Link href={`/teacher/${item.id}`}>
+            <button>More</button>
+          </Link>
         </div>
-        {e2ee && (
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
-            <label htmlFor="passphrase">Passphrase</label>
-            <input
-              id="passphrase"
-              type="password"
-              value={sharedPassphrase}
-              onChange={(ev) => setSharedPassphrase(ev.target.value)}
+      ))}
+
+      {showModal && selectedTeacher && (
+        <div className="modal">
+          <h3>Book a Lesson with {selectedTeacher.name}</h3>
+          <label>
+            Select Day:
+            <select value={selectedDay} onChange={(e) => setSelectedDay(e.target.value)}>
+              <option value="">Select Day</option>
+              {Object.keys(selectedTeacher.availableDays).map((day) =>
+                day.length ? (
+                  <option key={day} value={day}>
+                    {day}
+                  </option>
+                ) : (
+                  ''
+                ),
+              )}
+            </select>
+          </label>
+
+          {selectedDay && (
+            <label>
+              Select Time:
+              <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+                <option value="">Select Time</option>
+                {selectedTeacher.availableDays[selectedDay].map((time: string) => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <label>
+            Comment:
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Write your comment here"
             />
-          </div>
-        )}
-      </div>
+          </label>
+
+          <button onClick={handleSubmit}>Submit</button>
+          <button onClick={() => setShowModal(false)}>Cancel</button>
+        </div>
+      )}
     </div>
-  );
-}
-
-function CustomConnectionTab(props: { label: string }) {
-  const router = useRouter();
-
-  const [e2ee, setE2ee] = useState(false);
-  const [sharedPassphrase, setSharedPassphrase] = useState(randomString(64));
-
-  const onSubmit: React.FormEventHandler<HTMLFormElement> = (event) => {
-    event.preventDefault();
-    const formData = new FormData(event.target as HTMLFormElement);
-    const serverUrl = formData.get('serverUrl');
-    const token = formData.get('token');
-    if (e2ee) {
-      router.push(
-        `/custom/?liveKitUrl=${serverUrl}&token=${token}#${encodePassphrase(sharedPassphrase)}`,
-      );
-    } else {
-      router.push(`/custom/?liveKitUrl=${serverUrl}&token=${token}`);
-    }
-  };
-  return (
-    <form className={styles.tabContent} onSubmit={onSubmit}>
-      <p style={{ marginTop: 0 }}>
-        Connect LiveKit Meet with a custom server using LiveKit Cloud or LiveKit Server.
-      </p>
-      <input
-        id="serverUrl"
-        name="serverUrl"
-        type="url"
-        placeholder="LiveKit Server URL: wss://*.livekit.cloud"
-        required
-      />
-      <textarea
-        id="token"
-        name="token"
-        placeholder="Token"
-        required
-        rows={5}
-        style={{ padding: '1px 2px', fontSize: 'inherit', lineHeight: 'inherit' }}
-      />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
-          <input
-            id="use-e2ee"
-            type="checkbox"
-            checked={e2ee}
-            onChange={(ev) => setE2ee(ev.target.checked)}
-          ></input>
-          <label htmlFor="use-e2ee">Enable end-to-end encryption</label>
-        </div>
-        {e2ee && (
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
-            <label htmlFor="passphrase">Passphrase</label>
-            <input
-              id="passphrase"
-              type="password"
-              value={sharedPassphrase}
-              onChange={(ev) => setSharedPassphrase(ev.target.value)}
-            />
-          </div>
-        )}
-      </div>
-
-      <hr
-        style={{ width: '100%', borderColor: 'rgba(255, 255, 255, 0.15)', marginBlock: '1rem' }}
-      />
-      <button
-        style={{ paddingInline: '1.25rem', width: '100%' }}
-        className="lk-button"
-        type="submit"
-      >
-        Connect
-      </button>
-    </form>
-  );
-}
-
-export default function Page() {
-  return (
-    <>
-      <main className={styles.main} data-lk-theme="default">
-        <div className="header">
-          <img src="/images/livekit-meet-home.svg" alt="LiveKit Meet" width="360" height="45" />
-          <h2>
-            Open source video conferencing app built on{' '}
-            <a href="https://github.com/livekit/components-js?ref=meet" rel="noopener">
-              LiveKit&nbsp;Components
-            </a>
-            ,{' '}
-            <a href="https://livekit.io/cloud?ref=meet" rel="noopener">
-              LiveKit&nbsp;Cloud
-            </a>{' '}
-            and Next.js.
-          </h2>
-        </div>
-        <Suspense fallback="Loading">
-          <Tabs>
-            <DemoMeetingTab label="Demo" />
-            <CustomConnectionTab label="Custom" />
-          </Tabs>
-        </Suspense>
-      </main>
-      <footer data-lk-theme="default">
-        Hosted on{' '}
-        <a href="https://livekit.io/cloud?ref=meet" rel="noopener">
-          LiveKit Cloud
-        </a>
-        . Source code on{' '}
-        <a href="https://github.com/livekit/meet?ref=meet" rel="noopener">
-          GitHub
-        </a>
-        .
-      </footer>
-    </>
   );
 }
