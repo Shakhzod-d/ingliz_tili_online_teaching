@@ -7,8 +7,8 @@ import Link from 'next/link';
 
 export default function () {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get('redirect') || '/';
+  // const searchParams = useSearchParams();
+  // const redirectUrl = searchParams.get('redirect') || '/';
 
   const [loading, setLoading] = useState<boolean>(false);
   const emailRef = useRef<HTMLInputElement | any>(null);
@@ -28,7 +28,16 @@ export default function () {
       localStorage.setItem('role', req.data.data.role);
       document.cookie = `authToken=${req.data.data.token}; path=/;`;
       alert('Login successful');
-      router.push(redirectUrl); // Kirgandan so'ng foydalanuvchini oldingi sahifaga qaytarish
+
+      if (req.data.data.role == 'teacher') {
+        router.push('/dashboard/teacher/' + req.data.data.id);
+      } else if (req.data.data.role == 'teacher') {
+        router.push('/dashboard/teacher/' + req.data.data.id);
+      } else {
+        alert("role aniqlab bo'lmadi!!!");
+      }
+
+      // router.push(redirectUrl); // Kirgandan so'ng foydalanuvchini oldingi sahifaga qaytarish
     } catch (error: any) {
       alert(error.message);
     } finally {
