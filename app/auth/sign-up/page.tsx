@@ -56,26 +56,28 @@ export default function () {
       <input type="password" placeholder="Enter your password" required ref={passwordRef} />
 
       <p>Who you are?</p>
-      <label>
-        <input
-          type="radio"
-          name="role"
-          value="student"
-          required
-          onChange={() => setRole('student')}
-        />
-        <span>Student</span>
-      </label>
-      <label>
-        <input
-          type="radio"
-          name="role"
-          value="teacher"
-          required
-          onChange={() => setRole('teacher')}
-        />
-        <span>Teacher</span>
-      </label>
+      <div className="select-role">
+        <label>
+          <input
+            type="radio"
+            name="role"
+            value="student"
+            required
+            onChange={() => setRole('student')}
+          />
+          <span>Student</span>
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="role"
+            value="teacher"
+            required
+            onChange={() => setRole('teacher')}
+          />
+          <span>Teacher</span>
+        </label>
+      </div>
 
       <button disabled={loading}>Register</button>
       <Link href="/auth/sign-in">Login</Link>

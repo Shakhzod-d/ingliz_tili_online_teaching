@@ -19,7 +19,8 @@
     "next": "14.2.14",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "tinykeys": "^3.0.0"
+    "tinykeys": "^3.0.0",
+    "uuid": "^11.0.2"
   },
   "devDependencies": {
     "@types/node": "20.16.10",

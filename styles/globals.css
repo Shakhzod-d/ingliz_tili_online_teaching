@@ -1,5 +1,7 @@
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html {
@@ -17,6 +19,80 @@ body {
 body {
   display: flex;
   flex-direction: column;
+}
+
+.cards {
+  display: flex;
+  justify-content: space-between;
+  max-width: 1130px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+  gap: 40px;
+}
+
+.card {
+  width: 27%;
+  border: 2px solid green;
+  padding: 20px;
+
+  * {
+    margin-bottom: 15px;
+  }
+}
+
+button {
+  padding: 10px;
+  border-radius: 5px;
+  background: green;
+  display: inline-block;
+  margin-right: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+
+a {
+  text-decoration: none;
+  color: indigo;
+}
+
+.select-role {
+  display: flex;
+  align-items: center;
+  * {
+    display: flex;
+    align-items: center;
+  }
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 50px 0;
+  * {
+    flex: 1;
+    width: 100%;
+    padding: 10px;
+  }
+  a {
+    text-align: center;
+  }
+}
+
+nav {
+  display: flex;
+  justify-content: space-between;
+  max-width: 500px;
+  margin: 0 auto;
+  gap: 40px;
+  padding: 30px 0;
 }
 
 .header {

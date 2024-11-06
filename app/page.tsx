@@ -1,9 +1,11 @@
 'use client';
 
+import BookOrderModal from '@/components/shared/book-order-modal';
 import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function TeacherList() {
   const [data, setData] = useState<any>([]);
@@ -21,7 +23,8 @@ export default function TeacherList() {
       try {
         const response = await axios.get('https://48b745c40cead56f.mokky.dev/users');
         const teachers = response.data.filter(
-          (item: { isActive: boolean; role: string }) => item.role === 'teacher' && item.isActive,
+          (item: { availableDays: boolean; isActive: boolean; role: string }) =>
+            item.role === 'teacher' && item.isActive && item.availableDays,
         );
         setData(teachers);
       } catch (error) {
@@ -61,21 +64,40 @@ export default function TeacherList() {
       return;
     }
 
+    // LocalStorage dan studentId ni oling
+    const studentId = localStorage.getItem('studentId');
+    if (!studentId) {
+      alert('Student ID not found');
+      return;
+    }
+
     const lessonData = {
-      studentId: 2, // This should be dynamically retrieved
+      studentId: parseInt(studentId, 10), // studentId ni raqamga aylantirish
       day: selectedDay,
       time: selectedTime,
       status: 'new',
       comment,
       lessonStatus: 'not started',
       isAccepted: 'new',
-      lessonId: selectedTeacher.lessons.length + 1, // Increment lessonId based on existing lessons
+      lessonId: selectedTeacher.lessons.length + 1,
+      roomId: uuidv4(),
     };
 
     try {
+      // O'qituvchi uchun yangi darsni qo'shish
       await axios.patch(`https://48b745c40cead56f.mokky.dev/users/${selectedTeacher.id}`, {
         lessons: [...selectedTeacher.lessons, lessonData],
       });
+
+      // Talaba uchun yangi darsni qo'shish
+      await axios.patch(`https://48b745c40cead56f.mokky.dev/users/${studentId}`, {
+        orders: [
+          ...(data.find((user: { id: number }) => user.id === parseInt(studentId, 10))?.lessons ||
+            []),
+          { ...lessonData, studentId: selectedTeacher.id },
+        ],
+      });
+
       alert('Lesson booked successfully');
       setShowModal(false);
     } catch (error) {
@@ -86,18 +108,23 @@ export default function TeacherList() {
 
   return (
     <div>
-      {data.map((item: any) => (
-        <div key={item.id}>
-          <h2>{item.name}</h2>
-          <p>{item.description}</p>
-          <p>Price: {item.price}</p>
-          <p>Rate: {item.rates}</p>
-          <button onClick={() => handleBuy(item)}>Buy</button>
-          <Link href={`/teacher/${item.id}`}>
-            <button>More</button>
-          </Link>
-        </div>
-      ))}
+      <div>
+        <h1 style={{ textAlign: 'center' }}> Welcome!</h1>
+      </div>
+      <div className="cards">
+        {data.map((item: any) => (
+          <div key={item.id} className="card">
+            <h2>{item.name}</h2>
+            <p>{item.description}</p>
+            <p>Price: {item.price}</p>
+            <p>Rate: {item.rates}</p>
+            <button onClick={() => handleBuy(item)}>Buy</button>
+            <Link href={`/teacher/${item.id}`}>
+              <button>More</button>
+            </Link>
+          </div>
+        ))}
+      </div>
 
       {showModal && selectedTeacher && (
         <div className="modal">

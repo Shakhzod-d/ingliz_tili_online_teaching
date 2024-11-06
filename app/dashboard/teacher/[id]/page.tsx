@@ -1,6 +1,7 @@
 'use client';
 
 import axios from 'axios';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -42,22 +43,42 @@ export default function ProfileEdit() {
     });
   };
 
+  // LocalStorage dan studentId ni oling
+  const studentId = localStorage.getItem('studentId');
+  if (!studentId) {
+    alert('Student ID not found');
+    return;
+  }
+
   const handleAcceptOrCancel = async (lessonId: number, status: 'accepted' | 'canceled') => {
-    // Faqat tegishli `lessonId` uchun yangilash
+    // Update the teacher's orders list in the component state
     const updatedOrders = ordersList.map((lesson) =>
       lesson.lessonId === lessonId ? { ...lesson, isAccepted: status, status: 'viewed' } : lesson,
     );
-
     setOrdersList(updatedOrders);
 
-    // Backendga yangilangan darslar ro'yxatini yuborish
     try {
+      // Update the teacher's data on the backend
       await axios.patch(`https://48b745c40cead56f.mokky.dev/users/${id}`, {
         lessons: updatedOrders,
       });
-      console.log('Updated successfully');
+      console.log('Teacher orders updated successfully');
+
+      // Fetch the student ID associated with the lesson
+      const lesson = ordersList.find((lesson) => lesson.lessonId === lessonId);
+      if (lesson) {
+        // Update the student's orders data
+        await axios.patch(`https://48b745c40cead56f.mokky.dev/users/${lesson.studentId}`, {
+          orders: updatedOrders.map((order) =>
+            order.lessonId === lessonId
+              ? { ...order, isAccepted: status, status: 'viewed' }
+              : order,
+          ),
+        });
+        console.log('Student orders updated successfully');
+      }
     } catch (error) {
-      console.error('Failed to update:', error);
+      console.error('Failed to update orders:', error);
     }
   };
 
@@ -159,6 +180,10 @@ export default function ProfileEdit() {
                   Accept
                 </button>
               </div>
+            ) : item.isAccepted == 'accepted' ? (
+              <Link href={`/rooms/${item.roomId}`} target="_blank">
+                Go to lesson room
+              </Link>
             ) : (
               <button disabled>{item.isAccepted}</button>
             )}
