@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
-import axios from 'axios';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../../utils/firebase'; // Adjust the path based on your project structure
 import Link from 'next/link';
 
 export default function () {
@@ -15,26 +16,30 @@ export default function () {
     e.preventDefault();
     setLoading(true);
 
-    const data = {
-      email: emailRef.current.value,
-      password: passwordRef.current.value,
-    };
-
     try {
-      const req = await axios.post('https://48b745c40cead56f.mokky.dev/auth', data);
-      localStorage.setItem('role', req.data.data.role);
-      localStorage.setItem('studentId', req.data.data.id);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        emailRef.current.value,
+        passwordRef.current.value,
+      );
+      const user = userCredential.user;
 
-      // Token va role ni cookie'ga saqlash
-      document.cookie = `authToken=${req.data.data.token}; path=/;`;
-      document.cookie = `userRole=${req.data.data.role}; path=/;`;
+      // Assume that you have user roles stored in Firestore or in a custom claim
+      const role = await fetchUserRole(user.uid);
+
+      localStorage.setItem('role', role);
+      localStorage.setItem('studentId', user.uid);
+
+      // Save the authToken (you may also use Firebase session management instead)
+      document.cookie = `authToken=${await user.getIdToken()}; path=/;`;
+      document.cookie = `userRole=${role}; path=/;`;
 
       alert('Login successful');
 
-      if (req.data.data.role === 'teacher') {
-        router.push('/dashboard/teacher/' + req.data.data.id);
-      } else if (req.data.data.role === 'student') {
-        router.push('/dashboard/student/' + req.data.data.id);
+      if (role === 'teacher') {
+        router.push(`/dashboard/teacher/${user.uid}`);
+      } else if (role === 'student') {
+        router.push(`/dashboard/student/${user.uid}`);
       } else {
         alert("Role aniqlab bo'lmadi!!!");
       }
@@ -43,6 +48,12 @@ export default function () {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch user role from Firestore (you may replace this with your database structure)
+  const fetchUserRole = async (userId: string) => {
+    // Implement your method to fetch the user role here (e.g., from Firestore)
+    return 'student'; // or 'teacher' based on your data structure
   };
 
   return (

@@ -4,98 +4,159 @@ import axios from 'axios';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { db } from '../../../../utils/firebase'; // Adjust the path to your Firebase config
+import { arrayUnion, doc, onSnapshot, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 
 export default function ProfileEdit() {
   const [loading, setLoading] = useState<boolean>(false);
   const [data, setData] = useState<any>({});
-  const [availableDays, setAvailableDays] = useState<{ [key: string]: string[] }>({});
+  const [availableDays, setAvailableDays] = useState<{
+    [key: string]: { start: string; end: string }[];
+  }>({});
   const [ordersList, setOrdersList] = useState<any[]>([]);
-
   const { id } = useParams();
 
+  // Notification yuborish
+  const sendNotification = async (userId: string, message: string, type: string) => {
+    try {
+      const userRef = doc(db, 'users', userId);
+
+      const notification = {
+        title: 'New Notification',
+        body: message,
+        timestamp: Timestamp.now(),
+        type: type, // "teacher" yoki "student"
+        isRead: false,
+      };
+
+      // Notificationni foydalanuvchining notifications bo'limiga qo'shish
+      await updateDoc(userRef, {
+        notifications: arrayUnion(notification),
+      });
+
+      console.log('Notification sent to', userId);
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get('https://48b745c40cead56f.mokky.dev/users/' + id);
-        setData(response.data);
-        setAvailableDays(response.data.availableDays);
-        setOrdersList(response.data.lessons);
-      } catch (error) {
-        console.error(error);
-      } finally {
+    if (!id) return;
+
+    setLoading(true);
+
+    // Real-time listener for user data
+    if (typeof id === 'string') {
+      const userDocRef = doc(db, 'users', id);
+      const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const userData = docSnapshot.data();
+          setData(userData);
+          setAvailableDays(userData.availableDays || {});
+          setOrdersList(userData.lessons || []);
+        }
         setLoading(false);
-      }
-    };
-    fetchData();
+      });
+
+      // Clean up the listener on unmount
+      return () => unsubscribe();
+    }
   }, [id]);
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  const handleDayChange = (day: string, time: string) => {
+  const handleTimeRangeChange = (
+    day: string,
+    index: number,
+    type: 'start' | 'end',
+    value: string,
+  ) => {
     setAvailableDays((prev) => {
-      const times = prev?.[day] || [];
-      if (times.includes(time)) {
-        return { ...prev, [day]: times.filter((t) => t !== time) };
-      } else {
-        return { ...prev, [day]: [...times, time] };
-      }
+      const dayTimes = prev[day] || [];
+      const updatedTimes = [...dayTimes];
+      updatedTimes[index] = { ...updatedTimes[index], [type]: value };
+      return { ...prev, [day]: updatedTimes };
     });
   };
 
-  // LocalStorage dan studentId ni oling
-  const studentId = localStorage.getItem('studentId');
-  if (!studentId) {
-    alert('Student ID not found');
-    return;
-  }
-
-  const handleAcceptOrCancel = async (lessonId: number, status: 'accepted' | 'canceled') => {
-    // Update the teacher's orders list in the component state
-    const updatedOrders = ordersList.map((lesson) =>
-      lesson.lessonId === lessonId ? { ...lesson, isAccepted: status, status: 'viewed' } : lesson,
-    );
-    setOrdersList(updatedOrders);
-
-    try {
-      // Update the teacher's data on the backend
-      await axios.patch(`https://48b745c40cead56f.mokky.dev/users/${id}`, {
-        lessons: updatedOrders,
-      });
-      console.log('Teacher orders updated successfully');
-
-      // Fetch the student ID associated with the lesson
-      const lesson = ordersList.find((lesson) => lesson.lessonId === lessonId);
-      if (lesson) {
-        // Update the student's orders data
-        await axios.patch(`https://48b745c40cead56f.mokky.dev/users/${lesson.studentId}`, {
-          orders: updatedOrders.map((order) =>
-            order.lessonId === lessonId
-              ? { ...order, isAccepted: status, status: 'viewed' }
-              : order,
-          ),
-        });
-        console.log('Student orders updated successfully');
-      }
-    } catch (error) {
-      console.error('Failed to update orders:', error);
-    }
+  const addTimeRange = (day: string) => {
+    setAvailableDays((prev) => ({
+      ...prev,
+      [day]: [...(prev[day] || []), { start: '', end: '' }],
+    }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const removeTimeRange = (day: string, index: number) => {
+    setAvailableDays((prev) => ({
+      ...prev,
+      [day]: prev[day].filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const profileData = {
       ...data,
       availableDays,
       isActive: true,
     };
-    console.log('Final Profile Data:', profileData);
-    axios.patch('https://48b745c40cead56f.mokky.dev/users/' + id, profileData);
+    try {
+      if (typeof id === 'string') {
+        const userDocRef = doc(db, 'users', id);
+        await updateDoc(userDocRef, profileData);
+        console.log('Profile data saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving profile data:', error);
+    }
+  };
+
+  const handleNewOrder = async (orderData: any) => {
+    const { teacherId, studentId, lessonId, roomId } = orderData;
+    const message = `New order from ${studentId} for lesson ${lessonId}.`;
+
+    // Teacherga notification yuborish
+    await sendNotification(teacherId, message, 'teacher');
+
+    // Orderni Firestore'ga qo'shish
+    const orderRef = doc(db, 'orders', lessonId);
+    await setDoc(orderRef, orderData);
+  };
+
+  const handleAcceptOrCancel = async (lessonId: number, status: 'accepted' | 'canceled') => {
+    const updatedOrders = ordersList.map((lesson) =>
+      lesson.lessonId === lessonId ? { ...lesson, isAccepted: status, status: 'viewed' } : lesson,
+    );
+    setOrdersList(updatedOrders);
+
+    try {
+      if (typeof id === 'string') {
+        const userDocRef = doc(db, 'users', id);
+        await updateDoc(userDocRef, { lessons: updatedOrders });
+
+        const lesson = ordersList.find((lesson) => lesson.lessonId === lessonId);
+        if (lesson) {
+          const studentDocRef = doc(db, 'users', lesson.studentId);
+          await updateDoc(studentDocRef, {
+            orders: updatedOrders.map((order) =>
+              order.lessonId === lessonId
+                ? { ...order, isAccepted: status, status: 'viewed' }
+                : order,
+            ),
+          });
+          console.log('Student orders updated successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update orders:', error);
+    }
   };
 
   if (loading) {
     return <p>loading...</p>;
   }
+
+  console.log(data);
 
   return (
     <div>
@@ -117,34 +178,30 @@ export default function ProfileEdit() {
         />
 
         <h3>Select Available Days and Times</h3>
-        {/* Available days code */}
         {daysOfWeek.map((day) => (
           <div key={day}>
             <p>{day}</p>
-            <label>
-              <input
-                type="checkbox"
-                onChange={() => handleDayChange(day, 'Morning')}
-                checked={availableDays?.[day]?.includes('Morning') || false}
-              />
-              Morning
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                onChange={() => handleDayChange(day, 'Afternoon')}
-                checked={availableDays?.[day]?.includes('Afternoon') || false}
-              />
-              Afternoon
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                onChange={() => handleDayChange(day, 'Evening')}
-                checked={availableDays?.[day]?.includes('Evening') || false}
-              />
-              Evening
-            </label>
+            {(availableDays[day] || []).map((timeRange, index) => (
+              <div key={index}>
+                <input
+                  type="time"
+                  value={timeRange.start}
+                  onChange={(e) => handleTimeRangeChange(day, index, 'start', e.target.value)}
+                />
+                <span> to </span>
+                <input
+                  type="time"
+                  value={timeRange.end}
+                  onChange={(e) => handleTimeRangeChange(day, index, 'end', e.target.value)}
+                />
+                <button type="button" onClick={() => removeTimeRange(day, index)}>
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={() => addTimeRange(day)}>
+              Add Time Range
+            </button>
           </div>
         ))}
 

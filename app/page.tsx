@@ -1,17 +1,19 @@
 'use client';
-
-import BookOrderModal from '@/components/shared/book-order-modal';
-import axios from 'axios';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { v4 as uuidv4 } from 'uuid';
+import { addDays } from 'date-fns';
+import { db } from '../utils/firebase';
+import { collection, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 export default function TeacherList() {
   const [data, setData] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
-  const [selectedDay, setSelectedDay] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [comment, setComment] = useState<string>('');
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -19,29 +21,29 @@ export default function TeacherList() {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get('https://48b745c40cead56f.mokky.dev/users');
-        const teachers = response.data.filter(
-          (item: { availableDays: boolean; isActive: boolean; role: string }) =>
-            item.role === 'teacher' && item.isActive && item.availableDays,
-        );
-        setData(teachers);
-      } catch (error) {
-        console.error(error);
-      }
+    // `teachers` kolleksiyasidagi o'zgarishlarni real-time kuzatish
+    const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const teachers = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((teacher: any) => teacher.isActive && teacher.availableDays);
+      setData(teachers);
       setLoading(false);
-    };
-    fetchData();
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  if (loading) {
-    return <p>Loading...</p>;
-  }
+  const getAvailableDates = () => {
+    if (!selectedTeacher) return [];
+    const daysOfWeek = Object.keys(selectedTeacher.availableDays);
+    return Array.from({ length: 30 }, (_, i) => addDays(new Date(), i)).filter((date) =>
+      daysOfWeek.includes(date.toLocaleDateString('en-US', { weekday: 'long' })),
+    );
+  };
 
   const handleBuy = (teacher: any) => {
     setSelectedTeacher(teacher);
-    setSelectedDay('');
+    setSelectedDate(null);
     setSelectedTime('');
     setComment('');
     setShowModal(true);
@@ -53,18 +55,16 @@ export default function TeacherList() {
       .find((row) => row.startsWith('authToken='))
       ?.split('=')[1];
 
-    // Agar token mavjud bo'lmasa, foydalanuvchini sign-in sahifasiga yo'naltirish
     if (!token) {
       router.push('/auth/sign-in');
       return;
     }
 
-    if (!selectedDay || !selectedTime) {
+    if (!selectedDate || !selectedTime) {
       alert('Please select a day and time.');
       return;
     }
 
-    // LocalStorage dan studentId ni oling
     const studentId = localStorage.getItem('studentId');
     if (!studentId) {
       alert('Student ID not found');
@@ -72,8 +72,8 @@ export default function TeacherList() {
     }
 
     const lessonData = {
-      studentId: parseInt(studentId, 10), // studentId ni raqamga aylantirish
-      day: selectedDay,
+      studentId: studentId,
+      day: selectedDate.toLocaleDateString('en-US', { weekday: 'long' }),
       time: selectedTime,
       status: 'new',
       comment,
@@ -84,18 +84,16 @@ export default function TeacherList() {
     };
 
     try {
-      // O'qituvchi uchun yangi darsni qo'shish
-      await axios.patch(`https://48b745c40cead56f.mokky.dev/users/${selectedTeacher.id}`, {
-        lessons: [...selectedTeacher.lessons, lessonData],
+      // Teacher kolleksiyasida `lessons` yangilash
+      const teacherRef = doc(db, 'users', selectedTeacher.id);
+      await updateDoc(teacherRef, {
+        lessons: arrayUnion(lessonData),
       });
 
-      // Talaba uchun yangi darsni qo'shish
-      await axios.patch(`https://48b745c40cead56f.mokky.dev/users/${studentId}`, {
-        orders: [
-          ...(data.find((user: { id: number }) => user.id === parseInt(studentId, 10))?.lessons ||
-            []),
-          { ...lessonData, studentId: selectedTeacher.id },
-        ],
+      // Student kolleksiyasida `orders` yangilash
+      const studentRef = doc(db, 'users', studentId);
+      await updateDoc(studentRef, {
+        orders: arrayUnion({ ...lessonData, teacherId: selectedTeacher.id }),
       });
 
       alert('Lesson booked successfully');
@@ -106,11 +104,15 @@ export default function TeacherList() {
     }
   };
 
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  console.log(data);
+
   return (
     <div>
-      <div>
-        <h1 style={{ textAlign: 'center' }}> Welcome!</h1>
-      </div>
+      <h1 className=" text-center">Welcome!</h1>
       <div className="cards">
         {data.map((item: any) => (
           <div key={item.id} className="card">
@@ -130,29 +132,25 @@ export default function TeacherList() {
         <div className="modal">
           <h3>Book a Lesson with {selectedTeacher.name}</h3>
           <label>
-            Select Day:
-            <select value={selectedDay} onChange={(e) => setSelectedDay(e.target.value)}>
-              <option value="">Select Day</option>
-              {Object.keys(selectedTeacher.availableDays).map((day) =>
-                day.length ? (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
-                ) : (
-                  ''
-                ),
-              )}
-            </select>
+            Select Date:
+            <DatePicker
+              selected={selectedDate}
+              onChange={(date) => setSelectedDate(date)}
+              includeDates={getAvailableDates()}
+              placeholderText="Select a date"
+            />
           </label>
 
-          {selectedDay && (
+          {selectedDate && (
             <label>
               Select Time:
               <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
                 <option value="">Select Time</option>
-                {selectedTeacher.availableDays[selectedDay].map((time: string) => (
-                  <option key={time} value={time}>
-                    {time}
+                {selectedTeacher.availableDays[
+                  selectedDate.toLocaleDateString('en-US', { weekday: 'long' })
+                ].map((time: { start: string; end: string }) => (
+                  <option key={`${time.start}-${time.end}`} value={`${time.start} - ${time.end}`}>
+                    {`${time.start} - ${time.end}`}
                   </option>
                 ))}
               </select>

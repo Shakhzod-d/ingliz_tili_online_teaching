@@ -1,47 +1,51 @@
 'use client';
 
-import axios from 'axios';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useRef } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { auth, db } from '../../../utils/firebase'; // Adjust the path as needed
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
-export default function () {
+export default function Register() {
   const [loading, setLoading] = useState<boolean>(false);
   const [role, setRole] = useState<string>('');
   const passwordRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
+  const router = useRouter();
+
   const sendData = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    let data = {};
-
-    if (role == 'teacher') {
-      data = {
-        name: nameRef.current?.value,
-        email: emailRef.current?.value,
-        password: passwordRef.current?.value,
-        role: role,
-        rates: 0,
-        price: 0,
-        lessons: [],
-        comments: [],
-        avaibleDays: [],
-        isActive: false,
-      };
-    } else if (role == 'student') {
-      data = {
-        name: nameRef.current?.value,
-        email: emailRef.current?.value,
-        password: passwordRef.current?.value,
-        role: role,
-      };
-    }
-
     try {
-      await axios.post('https://48b745c40cead56f.mokky.dev/register', data);
-      alert('Success');
+      // Register user with Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        emailRef.current?.value as string,
+        passwordRef.current?.value as string,
+      );
+      const user = userCredential.user;
+
+      // Prepare user data based on role
+      const userData = {
+        name: nameRef.current?.value,
+        email: emailRef.current?.value,
+        role: role,
+        id: user.uid,
+        ...(role === 'teacher'
+          ? { rates: 0, price: 0, lessons: [], comments: [], availableDays: [], isActive: false }
+          : {}),
+      };
+
+      // Save additional user information in Firestore
+      await setDoc(doc(db, 'users', user.uid), userData);
+
+      alert('Registration successful');
+      router.push('/auth/sign-in');
     } catch (error: any) {
       alert(error.message);
     } finally {
