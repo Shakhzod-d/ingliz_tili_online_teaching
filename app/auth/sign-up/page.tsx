@@ -10,7 +10,7 @@ import { doc, setDoc } from 'firebase/firestore';
 
 export default function Register() {
   const [loading, setLoading] = useState<boolean>(false);
-  const [role, setRole] = useState<string>('');
+  const [role, setRole] = useState<string>('student');
   const passwordRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -59,13 +59,14 @@ export default function Register() {
       <input type="email" placeholder="Enter your email" required ref={emailRef} />
       <input type="password" placeholder="Enter your password" required ref={passwordRef} />
 
-      <p>Who you are?</p>
+      <p>Who are you?</p>
       <div className="select-role">
         <label>
           <input
             type="radio"
             name="role"
             value="student"
+            checked={role === 'student'}
             required
             onChange={() => setRole('student')}
           />
@@ -76,6 +77,7 @@ export default function Register() {
             type="radio"
             name="role"
             value="teacher"
+            checked={role === 'teacher'}
             required
             onChange={() => setRole('teacher')}
           />

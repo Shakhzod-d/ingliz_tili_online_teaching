@@ -1,16 +1,21 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../../utils/firebase'; // Adjust the path based on your project structure
 import Link from 'next/link';
 
-export default function () {
+export default function SignIn() {
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(false);
+  const [isClient, setIsClient] = useState(false);
   const emailRef = useRef<HTMLInputElement | any>(null);
   const passwordRef = useRef<HTMLInputElement | any>(null);
+
+  useEffect(() => {
+    setIsClient(true); // this ensures window is defined
+  }, []);
 
   const fetchData = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +60,8 @@ export default function () {
     // Implement your method to fetch the user role here (e.g., from Firestore)
     return 'student'; // or 'teacher' based on your data structure
   };
+
+  if (!isClient) return null; // Do not render anything during SSR
 
   return (
     <form onSubmit={fetchData}>

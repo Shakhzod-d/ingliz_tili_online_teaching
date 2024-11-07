@@ -17,10 +17,13 @@ export default function TeacherList() {
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [comment, setComment] = useState<string>('');
   const [showModal, setShowModal] = useState<boolean>(false);
+  const [isClient, setIsClient] = useState(false); // Track if it's a client-side render
 
   const router = useRouter();
 
   useEffect(() => {
+    setIsClient(true); // This ensures that the code runs only on the client-side
+
     // `teachers` kolleksiyasidagi o'zgarishlarni real-time kuzatish
     const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
       const teachers = snapshot.docs
@@ -103,6 +106,8 @@ export default function TeacherList() {
       alert('Error booking lesson');
     }
   };
+
+  if (!isClient) return null; // Do not render anything during SSR
 
   if (loading) {
     return <p>Loading...</p>;
