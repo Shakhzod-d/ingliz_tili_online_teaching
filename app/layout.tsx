@@ -4,6 +4,7 @@ import '@livekit/components-styles';
 import '@livekit/components-styles/prefabs';
 import axios from 'axios';
 import type { Metadata, Viewport } from 'next';
+import { ToastContainer } from 'react-toastify';
 
 export const metadata: Metadata = {
   title: {
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
+        <ToastContainer />
         <Navbar />
         {children}
       </body>

@@ -7,7 +7,9 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { v4 as uuidv4 } from 'uuid';
 import { addDays } from 'date-fns';
 import { db } from '../utils/firebase';
-import { collection, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css'; // Toastify styles
 
 export default function TeacherList() {
   const [data, setData] = useState<any>([]);
@@ -51,31 +53,79 @@ export default function TeacherList() {
     setComment('');
     setShowModal(true);
   };
+  // import { toast } from 'react-toastify';
+  // import { v4 as uuidv4 } from 'uuid';
+  // import { db } from '../utils/firebase';
+  // import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+  // import { useRouter } from 'next/navigation';
 
-  const handleSubmit = async () => {
-    const token = document.cookie
+  // Cookie'dan authToken olish funksiyasi
+  const getAuthToken = () => {
+    return document.cookie
       .split('; ')
       .find((row) => row.startsWith('authToken='))
       ?.split('=')[1];
+  };
 
+  // LocalStorage'dan studentId olish funksiyasi
+  const getStudentId = () => {
+    return localStorage.getItem('studentId');
+  };
+
+  // O'qituvchiga notification yuborish funksiyasi
+  const sendNotificationToTeacher = async (teacherFcmToken: any) => {
+    const notificationPayload = {
+      to: teacherFcmToken,
+      notification: {
+        title: 'New Lesson Order',
+        body: 'You have a new lesson order from a student.',
+      },
+    };
+
+    try {
+      const response = await fetch(
+        `https://fcm.googleapis.com/v1/projects/say-it-well/messages:send`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'key=AIzaSyAzcNgIprjoeeSQ8GR777kCQwuIZA_qCuk',
+          },
+          body: JSON.stringify(notificationPayload),
+        },
+      );
+
+      const data = await response.json();
+      console.log('Notification sent successfully:', data);
+    } catch (error) {
+      console.error('Failed to send notification:', error);
+    }
+  };
+
+  const handleSubmit = async () => {
+    // Auth tokenni olish
+    const token = getAuthToken();
     if (!token) {
       router.push('/auth/sign-in');
       return;
     }
 
+    // Sanani va vaqtni tanlashni tekshirish
     if (!selectedDate || !selectedTime) {
       alert('Please select a day and time.');
       return;
     }
 
-    const studentId = localStorage.getItem('studentId');
+    // Student ID'ni olish
+    const studentId = getStudentId();
     if (!studentId) {
       alert('Student ID not found');
       return;
     }
 
+    // Lesson data tayyorlash
     const lessonData = {
-      studentId: studentId,
+      studentId,
       day: selectedDate.toLocaleDateString('en-US', { weekday: 'long' }),
       time: selectedTime,
       status: 'new',
@@ -87,10 +137,14 @@ export default function TeacherList() {
     };
 
     try {
-      // Teacher kolleksiyasida `lessons` yangilash
+      // Teacher kolleksiyasida `lessons` va `notifications` yangilash
       const teacherRef = doc(db, 'users', selectedTeacher.id);
       await updateDoc(teacherRef, {
         lessons: arrayUnion(lessonData),
+        notifications: arrayUnion({
+          message: `New lesson order from student ID: ${studentId}`,
+          timestamp: new Date().toISOString(),
+        }),
       });
 
       // Student kolleksiyasida `orders` yangilash
@@ -99,10 +153,19 @@ export default function TeacherList() {
         orders: arrayUnion({ ...lessonData, teacherId: selectedTeacher.id }),
       });
 
-      alert('Lesson booked successfully');
+      // O'qituvchining FCM tokenini olish uchun `getDoc`dan foydalanamiz
+      const teacherSnapshot = await getDoc(teacherRef);
+      const teacherData = teacherSnapshot.data();
+      if (teacherData?.fcmToken) {
+        await sendNotificationToTeacher(teacherData.fcmToken);
+      }
+
+      // O'qituvchiga toast notification ko'rsatish
+      toast.success(`Lesson booked with ${selectedTeacher.name}`);
+
       setShowModal(false);
     } catch (error) {
-      console.error(error);
+      console.error('Error booking lesson:', error);
       alert('Error booking lesson');
     }
   };
@@ -132,7 +195,6 @@ export default function TeacherList() {
           </div>
         ))}
       </div>
-
       {showModal && selectedTeacher && (
         <div className="modal">
           <h3>Book a Lesson with {selectedTeacher.name}</h3>
@@ -175,6 +237,7 @@ export default function TeacherList() {
           <button onClick={() => setShowModal(false)}>Cancel</button>
         </div>
       )}
+      <ToastContainer /> {/* Toastify container */}
     </div>
   );
 }

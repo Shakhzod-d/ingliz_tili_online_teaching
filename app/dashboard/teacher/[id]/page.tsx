@@ -4,8 +4,11 @@ import axios from 'axios';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { db } from '../../../../utils/firebase'; // Adjust the path to your Firebase config
+import { db } from '../../../../utils/firebase'; // Firebase konfiguratsiyasini to'g'ri joylang
 import { arrayUnion, doc, onSnapshot, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
+import { ToastContainer } from 'react-toastify';
+import { messaging } from '../../../../utils/firebase'; // Firebase Messaging konfiguratsiyasi
+import { getToken } from 'firebase/messaging';
 
 export default function ProfileEdit() {
   const [loading, setLoading] = useState<boolean>(false);
@@ -16,7 +19,7 @@ export default function ProfileEdit() {
   const [ordersList, setOrdersList] = useState<any[]>([]);
   const { id } = useParams();
 
-  // Notification yuborish
+  // Foydalanuvchiga notification yuborish
   const sendNotification = async (userId: string, message: string, type: string) => {
     try {
       const userRef = doc(db, 'users', userId);
@@ -25,11 +28,11 @@ export default function ProfileEdit() {
         title: 'New Notification',
         body: message,
         timestamp: Timestamp.now(),
-        type: type, // "teacher" yoki "student"
+        type, // "teacher" yoki "student"
         isRead: false,
       };
 
-      // Notificationni foydalanuvchining notifications bo'limiga qo'shish
+      // Notificationni foydalanuvchi hujjatiga qo'shish
       await updateDoc(userRef, {
         notifications: arrayUnion(notification),
       });
@@ -40,12 +43,12 @@ export default function ProfileEdit() {
     }
   };
 
+  // Foydalanuvchi ma'lumotlarini yuklash
   useEffect(() => {
     if (!id) return;
-
     setLoading(true);
 
-    // Real-time listener for user data
+    // Foydalanuvchi hujjatiga real-time listener
     if (typeof id === 'string') {
       const userDocRef = doc(db, 'users', id);
       const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
@@ -58,13 +61,15 @@ export default function ProfileEdit() {
         setLoading(false);
       });
 
-      // Clean up the listener on unmount
+      // Komponent unmounted bo'lganda listenerni to'xtatish
       return () => unsubscribe();
     }
   }, [id]);
 
+  // Hafta kunlari
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+  // Vaqt diapazonlarini boshqarish
   const handleTimeRangeChange = (
     day: string,
     index: number,
@@ -78,6 +83,46 @@ export default function ProfileEdit() {
       return { ...prev, [day]: updatedTimes };
     });
   };
+
+  const requestPermissionAndSaveToken = async (userId: any) => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        console.log('Notificationga ruxsat berildi');
+
+        // FCM tokenini olish
+        const token = await getToken(messaging, {
+          vapidKey:
+            'BF1o1YRMXgOjaJXcSoYTuGpZ52E0mff7VzQKihZYFRT_KbHwQrHwMan4GAvzwuo2I6-IROlmBAm2WXIHkqyOTrQ',
+        });
+        console.log(token);
+
+        if (token) {
+          console.log('FCM token:', token);
+
+          // Foydalanuvchiga tegishli hujjatni yangilash
+          const userRef = doc(db, 'users', userId);
+          await updateDoc(userRef, {
+            fcmToken: token, // Tokenni saqlash uchun Firestore'ga yoziladi
+          });
+
+          console.log("Token Firebase Firestore bazasiga muvaffaqiyatli qo'shildi");
+        } else {
+          console.log('Tokenni olishda xatolik');
+        }
+      } else {
+        console.error('Notification uchun ruxsat berilmadi');
+      }
+    } catch (error) {
+      console.error('Token olishda xatolik:', error);
+    }
+  };
+
+  useEffect(() => {
+    // if (id) {
+    requestPermissionAndSaveToken(id); // User ID'ga asoslanib tokenni saqlash
+    // }
+  }, [id]);
 
   const addTimeRange = (day: string) => {
     setAvailableDays((prev) => ({
@@ -93,6 +138,7 @@ export default function ProfileEdit() {
     }));
   };
 
+  // Foydalanuvchi profilini yangilash
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const profileData = {
@@ -111,18 +157,20 @@ export default function ProfileEdit() {
     }
   };
 
+  // Yangi buyurtma qo'shish va o'qituvchiga xabar yuborish
   const handleNewOrder = async (orderData: any) => {
     const { teacherId, studentId, lessonId, roomId } = orderData;
     const message = `New order from ${studentId} for lesson ${lessonId}.`;
 
-    // Teacherga notification yuborish
+    // O'qituvchiga xabar yuborish
     await sendNotification(teacherId, message, 'teacher');
 
-    // Orderni Firestore'ga qo'shish
+    // Firestore'ga buyurtmani qo'shish
     const orderRef = doc(db, 'orders', lessonId);
     await setDoc(orderRef, orderData);
   };
 
+  // Buyurtmani qabul qilish yoki rad etish
   const handleAcceptOrCancel = async (lessonId: number, status: 'accepted' | 'canceled') => {
     const updatedOrders = ordersList.map((lesson) =>
       lesson.lessonId === lessonId ? { ...lesson, isAccepted: status, status: 'viewed' } : lesson,
@@ -137,6 +185,8 @@ export default function ProfileEdit() {
         const lesson = ordersList.find((lesson) => lesson.lessonId === lessonId);
         if (lesson) {
           const studentDocRef = doc(db, 'users', lesson.studentId);
+
+          // Talabaning buyurtmalar ro'yxatini yangilash
           await updateDoc(studentDocRef, {
             orders: updatedOrders.map((order) =>
               order.lessonId === lessonId
@@ -144,6 +194,7 @@ export default function ProfileEdit() {
                 : order,
             ),
           });
+
           console.log('Student orders updated successfully');
         }
       }
@@ -160,6 +211,8 @@ export default function ProfileEdit() {
 
   return (
     <div>
+      <Link href={`/dashboard/teacher/${id}/orders`}>Orders</Link>
+      <Link href={`/dashboard/teacher/${id}/notifications`}>Notifications</Link>
       <h2>Edit your profile</h2>
       <form onSubmit={handleSubmit}>
         <input
@@ -247,6 +300,8 @@ export default function ProfileEdit() {
           </div>
         ))}
       </div>
+
+      <ToastContainer />
     </div>
   );
 }

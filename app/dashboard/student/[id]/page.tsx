@@ -3,19 +3,23 @@
 import { useParams } from 'next/navigation';
 import { Key, ReactNode, useEffect, useState } from 'react';
 import { db } from '../../../../utils/firebase'; // Firebase konfiguratsiyangizni import qiling
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { messaging } from '../../../../utils/firebase'; // Firebase Messaging konfiguratsiyangizni import qiling
 import Link from 'next/link';
+import { getToken } from 'firebase/messaging';
 
 export default function StudentDashboard() {
-  const { id } = useParams();
+  const { id } = useParams(); // Bu 'id' foydalanuvchining IDsi
 
-  const [data, setData] = useState<any>([]);
+  const [data, setData] = useState<any>([]); // Foydalanuvchi va buyurtmalar ma'lumotlarini saqlash uchun
+  const [fcmToken, setFcmToken] = useState<string | null>(null); // FCM token uchun state
 
+  // Firestore'dan foydalanuvchi ma'lumotlarini olish
   useEffect(() => {
     if (!id) return;
 
     if (typeof id === 'string') {
-      // Firestore'ga murojaat qilib, foydalanuvchi ma'lumotlarini olish
+      // Firestore'da foydalanuvchini kuzatish
       const userRef = doc(db, 'users', id);
       const unsubscribe = onSnapshot(userRef, (snapshot) => {
         if (snapshot.exists()) {
@@ -29,6 +33,43 @@ export default function StudentDashboard() {
       return () => unsubscribe();
     }
   }, [id]);
+
+  // Brauzer bildirishnomalari uchun ruxsat olish va FCM token olish
+  const requestPermission = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const token = await getToken(messaging, {
+          vapidKey:
+            'BF1o1YRMXgOjaJXcSoYTuGpZ52E0mff7VzQKihZYFRT_KbHwQrHwMan4GAvzwuo2I6-IROlmBAm2WXIHkqyOTrQ',
+        });
+        console.log('FCM Token:', token);
+        setFcmToken(token); // Tokenni state ga o'rnatish
+        if (id) {
+          saveTokenToDatabase(id, token); // Tokenni Firestore'ga saqlash
+        }
+      } else {
+        console.error('Ruxsat berilmadi');
+      }
+    } catch (error) {
+      console.error('Ruxsat olishda xatolik yoki tokenni olishda muammo:', error);
+    }
+  };
+
+  // FCM tokenni Firestore'ga saqlash
+  const saveTokenToDatabase = async (userId: any, token: string) => {
+    try {
+      await setDoc(doc(db, 'users', userId), { fcmToken: token }, { merge: true });
+      console.log('Token muvaffaqiyatli saqlandi');
+    } catch (error) {
+      console.error('Tokenni saqlashda xatolik:', error);
+    }
+  };
+
+  // FCM token olish funksiyasini komponent yuklanganda chaqirish
+  useEffect(() => {
+    requestPermission();
+  }, []);
 
   console.log(data);
 

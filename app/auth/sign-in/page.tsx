@@ -3,8 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../../utils/firebase'; // Adjust the path based on your project structure
+import { auth, firestore } from '../../../utils/firebase'; // Adjust the path based on your project structure
 import Link from 'next/link';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function SignIn() {
   const router = useRouter();
@@ -41,6 +42,8 @@ export default function SignIn() {
 
       alert('Login successful');
 
+      console.log(role);
+
       if (role === 'teacher') {
         router.push(`/dashboard/teacher/${user.uid}`);
       } else if (role === 'student') {
@@ -56,9 +59,20 @@ export default function SignIn() {
   };
 
   // Fetch user role from Firestore (you may replace this with your database structure)
+
   const fetchUserRole = async (userId: string) => {
-    // Implement your method to fetch the user role here (e.g., from Firestore)
-    return 'student'; // or 'teacher' based on your data structure
+    try {
+      const docRef = doc(firestore, 'users', userId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return data.role || 'student'; // 'role' mavjud bo'lmasa, 'student' ni qaytaradi
+      }
+    } catch (error) {
+      console.error('Role olishda xato:', error);
+    }
+    return 'student'; // xato bo'lsa, 'student' rolini qaytaradi
   };
 
   if (!isClient) return null; // Do not render anything during SSR
