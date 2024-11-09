@@ -65,7 +65,7 @@ export default function TeacherList() {
   };
 
   const getStudentId = () => {
-    return localStorage.getItem('studentId');
+    return window.localStorage.getItem('studentId');
   };
 
   const sendNotificationToTeacher = async (teacherFcmToken: any) => {

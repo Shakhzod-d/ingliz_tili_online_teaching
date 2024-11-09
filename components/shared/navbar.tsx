@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const Navbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState<any>(false || localStorage.getItem('role')?.length);
+  const [isLoggedIn, setIsLoggedIn] = useState<any>(
+    false || window.localStorage.getItem('role')?.length,
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -17,8 +19,8 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       // Clear login state and remove stored values
-      localStorage.removeItem('role');
-      localStorage.removeItem('studentId');
+      window.localStorage.removeItem('role');
+      window.localStorage.removeItem('studentId');
       const response = await fetch('/api/logout', { method: 'GET' });
       if (response.ok) {
         setIsLoggedIn(false);
@@ -44,7 +46,9 @@ const Navbar = () => {
       ) : (
         <>
           <Link
-            href={`/dashboard/${localStorage.getItem('role')}/${localStorage.getItem('studentId')}`}
+            href={`/dashboard/${window.localStorage.getItem('role')}/${window.localStorage.getItem(
+              'studentId',
+            )}`}
           >
             Dashboard
           </Link>

@@ -6,11 +6,14 @@ import { useState, useRef } from 'react';
 import { auth, db } from '../../../utils/firebase'; // Adjust the path as needed
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-// import router from 'next/router';
 import { toast } from 'react-toastify';
 import Navbar from '@/components/shared/navbar';
 
 export default function Register() {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
   const [loading, setLoading] = useState<boolean>(false);
   const [role, setRole] = useState<string>('student');
   const passwordRef = useRef<HTMLInputElement>(null);
