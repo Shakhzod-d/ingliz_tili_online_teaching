@@ -5,29 +5,24 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const Navbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<any>(false || localStorage.getItem('role')?.length);
   const router = useRouter();
 
-  console.log(window.location.href.includes('dashboard'));
-
   useEffect(() => {
-    // Check for token in cookies to determine if the user is logged in
-    console.log(document.cookie);
-
-    setIsLoggedIn(
-      document.cookie.includes('authToken=') || window.location.href.includes('dashboard'),
-    );
-  }, [window.location.href]);
+    // Check if authToken exists in cookies to determine login status
+    const isUserLoggedIn = document.cookie.includes('authToken=');
+    setIsLoggedIn(isUserLoggedIn);
+  }, []);
 
   const handleLogout = async () => {
     try {
-      setIsLoggedIn(false);
+      // Clear login state and remove stored values
       localStorage.removeItem('role');
       localStorage.removeItem('studentId');
       const response = await fetch('/api/logout', { method: 'GET' });
       if (response.ok) {
         setIsLoggedIn(false);
-        router.refresh(); // Refresh the page to update the UI
+        router.refresh();
       } else {
         console.error('Failed to log out');
       }
@@ -39,12 +34,12 @@ const Navbar = () => {
 
   return (
     <nav>
-      <Link href={'/'}>Home</Link>
+      <Link href="/">Home</Link>
 
-      {!isLoggedIn || window.location.href.toString().includes('dashboard') ? (
+      {!isLoggedIn ? (
         <>
-          <Link href={'/auth/sign-in'}>Login</Link>
-          <Link href={'/auth/sign-up'}>Register</Link>
+          <Link href="/auth/sign-in">Login</Link>
+          <Link href="/auth/sign-up">Register</Link>
         </>
       ) : (
         <>

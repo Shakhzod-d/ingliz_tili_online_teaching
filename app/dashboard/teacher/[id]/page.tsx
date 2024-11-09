@@ -17,6 +17,7 @@ import {
 import { ToastContainer } from 'react-toastify';
 import { messaging } from '../../../../utils/firebase'; // Firebase Messaging konfiguratsiyasi
 import { getToken } from 'firebase/messaging';
+import Navbar from '@/components/shared/navbar';
 
 export default function ProfileEdit() {
   const [loading, setLoading] = useState<boolean>(false);
@@ -256,96 +257,99 @@ export default function ProfileEdit() {
   console.log(data);
 
   return (
-    <div>
-      <Link href={`/dashboard/teacher/${id}/orders`}>Orders</Link>
-      <Link href={`/dashboard/teacher/${id}/notifications`}>Notifications</Link>
-      <h2>Edit your profile</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Full name"
-          required
-          value={data.name || ''}
-          onChange={(e) => setData({ ...data, name: e.target.value })}
-        />
-        <input
-          type="number"
-          placeholder="Price"
-          required
-          value={data.price || ''}
-          onChange={(e) => setData({ ...data, price: e.target.value })}
-        />
-
-        <h3>Select Available Days and Times</h3>
-        {daysOfWeek.map((day) => (
-          <div key={day}>
-            <p>{day}</p>
-            {(availableDays[day] || []).map((timeRange, index) => (
-              <div key={index}>
-                <input
-                  type="time"
-                  value={timeRange.start}
-                  onChange={(e) => handleTimeRangeChange(day, index, 'start', e.target.value)}
-                />
-                <span> to </span>
-                <input
-                  type="time"
-                  value={timeRange.end}
-                  onChange={(e) => handleTimeRangeChange(day, index, 'end', e.target.value)}
-                />
-                <button type="button" onClick={() => removeTimeRange(day, index)}>
-                  Remove
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={() => addTimeRange(day)}>
-              Add Time Range
-            </button>
-          </div>
-        ))}
-
-        <button type="submit">Save</button>
-      </form>
-
+    <>
+      <Navbar />
       <div>
-        <h2>Orders</h2>
-        {ordersList.map((item) => (
-          <div
-            key={item.studentId}
-            style={{
-              border: '2px solid red',
-              display: 'inline-block',
-              padding: '15px',
-              margin: '40px',
-            }}
-          >
-            {item.status === 'new' && <b style={{ color: 'green' }}>NEW</b>}
-            <p>Student: {item.studentId}</p>
-            <p>Day: {item.day}</p>
-            <p>Time: {item.time}</p>
-            <p>Message: {item.comment}</p>
-            <p>
-              Lesson Status: <b style={{ color: 'red' }}>{item.lessonStatus}</b>
-            </p>
-            {item.isAccepted === 'new' ? (
-              <div>
-                <button onClick={() => handleAcceptOrCancel(item.lessonId, 'canceled')}>
-                  Cancel
-                </button>
-                <button onClick={() => handleAcceptOrCancel(item.lessonId, 'accepted')}>
-                  Accept
-                </button>
-              </div>
-            ) : item.isAccepted == 'accepted' ? (
-              <Link href={`/rooms/${item.roomId}`} target="_blank">
-                Go to lesson room
-              </Link>
-            ) : (
-              <button disabled>{item.isAccepted}</button>
-            )}
-          </div>
-        ))}
+        <Link href={`/dashboard/teacher/${id}/orders`}>Orders</Link>
+        <Link href={`/dashboard/teacher/${id}/notifications`}>Notifications</Link>
+        <h2>Edit your profile</h2>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Full name"
+            required
+            value={data.name || ''}
+            onChange={(e) => setData({ ...data, name: e.target.value })}
+          />
+          <input
+            type="number"
+            placeholder="Price"
+            required
+            value={data.price || ''}
+            onChange={(e) => setData({ ...data, price: e.target.value })}
+          />
+
+          <h3>Select Available Days and Times</h3>
+          {daysOfWeek.map((day) => (
+            <div key={day}>
+              <p>{day}</p>
+              {(availableDays[day] || []).map((timeRange, index) => (
+                <div key={index}>
+                  <input
+                    type="time"
+                    value={timeRange.start}
+                    onChange={(e) => handleTimeRangeChange(day, index, 'start', e.target.value)}
+                  />
+                  <span> to </span>
+                  <input
+                    type="time"
+                    value={timeRange.end}
+                    onChange={(e) => handleTimeRangeChange(day, index, 'end', e.target.value)}
+                  />
+                  <button type="button" onClick={() => removeTimeRange(day, index)}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={() => addTimeRange(day)}>
+                Add Time Range
+              </button>
+            </div>
+          ))}
+
+          <button type="submit">Save</button>
+        </form>
+
+        <div>
+          <h2>Orders</h2>
+          {ordersList.map((item) => (
+            <div
+              key={item.studentId}
+              style={{
+                border: '2px solid red',
+                display: 'inline-block',
+                padding: '15px',
+                margin: '40px',
+              }}
+            >
+              {item.status === 'new' && <b style={{ color: 'green' }}>NEW</b>}
+              <p>Student: {item.studentId}</p>
+              {/* <p>Day: {item.day}</p> */}
+              <p>Time: {item.time}</p>
+              <p>Message: {item.comment}</p>
+              <p>
+                Lesson Status: <b style={{ color: 'red' }}>{item.lessonStatus}</b>
+              </p>
+              {item.isAccepted === 'new' ? (
+                <div>
+                  <button onClick={() => handleAcceptOrCancel(item.lessonId, 'canceled')}>
+                    Cancel
+                  </button>
+                  <button onClick={() => handleAcceptOrCancel(item.lessonId, 'accepted')}>
+                    Accept
+                  </button>
+                </div>
+              ) : item.isAccepted == 'accepted' ? (
+                <Link href={`/rooms/${item.roomId}`} target="_blank">
+                  Go to lesson room
+                </Link>
+              ) : (
+                <button disabled>{item.isAccepted}</button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
