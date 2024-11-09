@@ -5,7 +5,15 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { db } from '../../../../utils/firebase'; // Firebase konfiguratsiyasini to'g'ri joylang
-import { arrayUnion, doc, onSnapshot, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
+import {
+  arrayUnion,
+  doc,
+  getDoc,
+  onSnapshot,
+  setDoc,
+  Timestamp,
+  updateDoc,
+} from 'firebase/firestore';
 import { ToastContainer } from 'react-toastify';
 import { messaging } from '../../../../utils/firebase'; // Firebase Messaging konfiguratsiyasi
 import { getToken } from 'firebase/messaging';
@@ -157,6 +165,34 @@ export default function ProfileEdit() {
     }
   };
 
+  const sendNotificationToStudent = async (studentFcmToken: string, lessonStatus: string) => {
+    const notificationPayload = {
+      message: {
+        token: studentFcmToken,
+        notification: {
+          title: `Your lesson was ${lessonStatus}`,
+          body: `Your lesson has been ${lessonStatus} by the teacher.`,
+        },
+      },
+    };
+
+    try {
+      const response = await fetch('/api/sendNotification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(notificationPayload),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to send notification');
+      }
+      console.log('Notification sent successfully to the student');
+    } catch (error) {
+      console.error('Failed to send notification to the student:', error);
+    }
+  };
+
   // Yangi buyurtma qo'shish va o'qituvchiga xabar yuborish
   const handleNewOrder = async (orderData: any) => {
     const { teacherId, studentId, lessonId, roomId } = orderData;
@@ -185,6 +221,16 @@ export default function ProfileEdit() {
         const lesson = ordersList.find((lesson) => lesson.lessonId === lessonId);
         if (lesson) {
           const studentDocRef = doc(db, 'users', lesson.studentId);
+
+          // Talabaning FCM tokenini olish
+          const studentSnapshot = await getDoc(studentDocRef);
+          const studentData = studentSnapshot.data();
+          const studentFcmToken = studentData?.fcmToken;
+
+          if (studentFcmToken) {
+            // Talabaga notification yuborish
+            await sendNotificationToStudent(studentFcmToken, status);
+          }
 
           // Talabaning buyurtmalar ro'yxatini yangilash
           await updateDoc(studentDocRef, {

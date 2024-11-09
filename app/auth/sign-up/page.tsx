@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useRef } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { auth, db } from '../../../utils/firebase'; // Adjust the path as needed
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
+import router from 'next/router';
+import { toast } from 'react-toastify';
 
 export default function Register() {
   const [loading, setLoading] = useState<boolean>(false);
@@ -15,14 +16,14 @@ export default function Register() {
   const emailRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
-  const router = useRouter();
+  // const router = useRouter();
 
   const sendData = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Register user with Firebase Auth
+      // Firebase orqali yangi foydalanuvchi ro'yxatdan o'tkazish
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         emailRef.current?.value as string,
@@ -30,7 +31,7 @@ export default function Register() {
       );
       const user = userCredential.user;
 
-      // Prepare user data based on role
+      // Foydalanuvchi ma'lumotlarini tayyorlash
       const userData = {
         name: nameRef.current?.value,
         email: emailRef.current?.value,
@@ -41,13 +42,13 @@ export default function Register() {
           : {}),
       };
 
-      // Save additional user information in Firestore
+      // Foydalanuvchi ma'lumotlarini Firestore ga saqlash
       await setDoc(doc(db, 'users', user.uid), userData);
 
-      alert('Registration successful');
-      router.push('/auth/sign-in');
+      toast.success('Registration successful');
+      // router.push('/auth/sign-in');
     } catch (error: any) {
-      alert(error.message);
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -85,7 +86,9 @@ export default function Register() {
         </label>
       </div>
 
-      <button disabled={loading}>Register</button>
+      <button type="submit" disabled={loading}>
+        {loading ? 'Registering...' : 'Register'}
+      </button>
       <Link href="/auth/sign-in">Login</Link>
     </form>
   );

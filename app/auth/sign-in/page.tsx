@@ -6,17 +6,14 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, firestore } from '../../../utils/firebase'; // Adjust the path based on your project structure
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
+import router from 'next/router';
+import { toast } from 'react-toastify';
 
 export default function SignIn() {
-  const router = useRouter();
+  // const router = useRouter();
   const [loading, setLoading] = useState<boolean>(false);
-  const [isClient, setIsClient] = useState(false);
   const emailRef = useRef<HTMLInputElement | any>(null);
   const passwordRef = useRef<HTMLInputElement | any>(null);
-
-  useEffect(() => {
-    setIsClient(true); // this ensures window is defined
-  }, []);
 
   const fetchData = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,36 +27,38 @@ export default function SignIn() {
       );
       const user = userCredential.user;
 
-      // Assume that you have user roles stored in Firestore or in a custom claim
+      // User role ni Firestore yoki boshqa manbadan olamiz
       const role = await fetchUserRole(user.uid);
 
-      localStorage.setItem('role', role);
-      localStorage.setItem('studentId', user.uid);
+      if (typeof window !== 'undefined') {
+        // Client tomonida `window` mavjudligini tekshirish
+        localStorage.setItem('role', role);
+        localStorage.setItem('studentId', user.uid);
 
-      // Save the authToken (you may also use Firebase session management instead)
-      document.cookie = `authToken=${await user.getIdToken()}; path=/;`;
-      document.cookie = `userRole=${role}; path=/;`;
+        // authToken va userRole cookielarini saqlash
+        document.cookie = `authToken=${await user.getIdToken()}; path=/;`;
+        document.cookie = `userRole=${role}; path=/;`;
 
-      alert('Login successful');
+        toast.success('Login successful');
+      }
 
       console.log(role);
 
       if (role === 'teacher') {
-        router.push(`/dashboard/teacher/${user.uid}`);
+        // router.push(`/dashboard/teacher/${user.uid}`);
       } else if (role === 'student') {
-        router.push(`/dashboard/student/${user.uid}`);
+        // router.push(`/dashboard/student/${user.uid}`);
       } else {
-        alert("Role aniqlab bo'lmadi!!!");
+        toast.error("Role aniqlab bo'lmadi!!!");
       }
     } catch (error: any) {
-      alert(error.message);
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch user role from Firestore (you may replace this with your database structure)
-
+  // Firestore dan user role ni olish
   const fetchUserRole = async (userId: string) => {
     try {
       const docRef = doc(firestore, 'users', userId);
@@ -74,8 +73,6 @@ export default function SignIn() {
     }
     return 'student'; // xato bo'lsa, 'student' rolini qaytaradi
   };
-
-  if (!isClient) return null; // Do not render anything during SSR
 
   return (
     <form onSubmit={fetchData}>

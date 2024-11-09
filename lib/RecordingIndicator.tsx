@@ -1,5 +1,6 @@
 import { useIsRecording } from '@livekit/components-react';
 import * as React from 'react';
+import { toast } from 'react-toastify';
 
 export function RecordingIndicator() {
   const isRecording = useIsRecording();
@@ -9,7 +10,7 @@ export function RecordingIndicator() {
     if (isRecording !== wasRecording) {
       setWasRecording(isRecording);
       if (isRecording) {
-        window.alert('This meeting is being recorded');
+        toast.warning('This meeting is being recorded');
       }
     }
   }, [isRecording]);

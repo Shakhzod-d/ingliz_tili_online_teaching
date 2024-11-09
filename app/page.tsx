@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -9,24 +9,21 @@ import { addDays } from 'date-fns';
 import { db } from '../utils/firebase';
 import { collection, onSnapshot, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; // Toastify styles
+import 'react-toastify/dist/ReactToastify.css';
+import router from 'next/router';
 
 export default function TeacherList() {
-  const [data, setData] = useState<any>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [comment, setComment] = useState<string>('');
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [isClient, setIsClient] = useState(false); // Track if it's a client-side render
 
-  const router = useRouter();
+  // const router = useRouter();
 
   useEffect(() => {
-    setIsClient(true); // This ensures that the code runs only on the client-side
-
-    // `teachers` kolleksiyasidagi o'zgarishlarni real-time kuzatish
     const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
       const teachers = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
@@ -53,13 +50,7 @@ export default function TeacherList() {
     setComment('');
     setShowModal(true);
   };
-  // import { toast } from 'react-toastify';
-  // import { v4 as uuidv4 } from 'uuid';
-  // import { db } from '../utils/firebase';
-  // import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
-  // import { useRouter } from 'next/navigation';
 
-  // Cookie'dan authToken olish funksiyasi
   const getAuthToken = () => {
     return document.cookie
       .split('; ')
@@ -67,63 +58,56 @@ export default function TeacherList() {
       ?.split('=')[1];
   };
 
-  // LocalStorage'dan studentId olish funksiyasi
   const getStudentId = () => {
     return localStorage.getItem('studentId');
   };
 
-  // O'qituvchiga notification yuborish funksiyasi
   const sendNotificationToTeacher = async (teacherFcmToken: any) => {
     const notificationPayload = {
-      to: teacherFcmToken,
-      notification: {
-        title: 'New Lesson Order',
-        body: 'You have a new lesson order from a student.',
+      message: {
+        token: teacherFcmToken,
+        notification: {
+          title: 'New Lesson Order',
+          body: 'You have a new lesson order from a student.',
+        },
       },
     };
 
     try {
-      const response = await fetch(
-        `https://fcm.googleapis.com/v1/projects/say-it-well/messages:send`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'key=AIzaSyAzcNgIprjoeeSQ8GR777kCQwuIZA_qCuk',
-          },
-          body: JSON.stringify(notificationPayload),
+      const response = await fetch('/api/sendNotification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      );
-
-      const data = await response.json();
-      console.log('Notification sent successfully:', data);
+        body: JSON.stringify(notificationPayload),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to send notification');
+      }
+      console.log('Notification sent successfully');
     } catch (error) {
       console.error('Failed to send notification:', error);
     }
   };
 
   const handleSubmit = async () => {
-    // Auth tokenni olish
     const token = getAuthToken();
     if (!token) {
-      router.push('/auth/sign-in');
+      // router.push('/auth/sign-in');
       return;
     }
 
-    // Sanani va vaqtni tanlashni tekshirish
     if (!selectedDate || !selectedTime) {
-      alert('Please select a day and time.');
+      toast.error('Please select a day and time.');
       return;
     }
 
-    // Student ID'ni olish
     const studentId = getStudentId();
     if (!studentId) {
-      alert('Student ID not found');
+      toast.error('Student ID not found');
       return;
     }
 
-    // Lesson data tayyorlash
     const lessonData = {
       studentId,
       day: selectedDate.toLocaleDateString('en-US', { weekday: 'long' }),
@@ -137,7 +121,6 @@ export default function TeacherList() {
     };
 
     try {
-      // Teacher kolleksiyasida `lessons` va `notifications` yangilash
       const teacherRef = doc(db, 'users', selectedTeacher.id);
       await updateDoc(teacherRef, {
         lessons: arrayUnion(lessonData),
@@ -147,42 +130,32 @@ export default function TeacherList() {
         }),
       });
 
-      // Student kolleksiyasida `orders` yangilash
       const studentRef = doc(db, 'users', studentId);
       await updateDoc(studentRef, {
         orders: arrayUnion({ ...lessonData, teacherId: selectedTeacher.id }),
       });
 
-      // O'qituvchining FCM tokenini olish uchun `getDoc`dan foydalanamiz
       const teacherSnapshot = await getDoc(teacherRef);
       const teacherData = teacherSnapshot.data();
       if (teacherData?.fcmToken) {
         await sendNotificationToTeacher(teacherData.fcmToken);
       }
 
-      // O'qituvchiga toast notification ko'rsatish
       toast.success(`Lesson booked with ${selectedTeacher.name}`);
-
       setShowModal(false);
     } catch (error) {
       console.error('Error booking lesson:', error);
-      alert('Error booking lesson');
+      toast.error('Error booking lesson');
     }
   };
 
-  if (!isClient) return null; // Do not render anything during SSR
-
-  if (loading) {
-    return <p>Loading...</p>;
-  }
-
-  console.log(data);
+  if (loading) return <p>Loading...</p>;
 
   return (
     <div>
-      <h1 className=" text-center">Welcome!</h1>
+      <h1 className="text-center">Welcome!</h1>
       <div className="cards">
-        {data.map((item: any) => (
+        {data.map((item) => (
           <div key={item.id} className="card">
             <h2>{item.name}</h2>
             <p>{item.description}</p>
@@ -207,7 +180,6 @@ export default function TeacherList() {
               placeholderText="Select a date"
             />
           </label>
-
           {selectedDate && (
             <label>
               Select Time:
@@ -215,7 +187,7 @@ export default function TeacherList() {
                 <option value="">Select Time</option>
                 {selectedTeacher.availableDays[
                   selectedDate.toLocaleDateString('en-US', { weekday: 'long' })
-                ].map((time: { start: string; end: string }) => (
+                ].map((time: { start: any; end: any }) => (
                   <option key={`${time.start}-${time.end}`} value={`${time.start} - ${time.end}`}>
                     {`${time.start} - ${time.end}`}
                   </option>
@@ -223,7 +195,6 @@ export default function TeacherList() {
               </select>
             </label>
           )}
-
           <label>
             Comment:
             <textarea
@@ -232,12 +203,11 @@ export default function TeacherList() {
               placeholder="Write your comment here"
             />
           </label>
-
           <button onClick={handleSubmit}>Submit</button>
           <button onClick={() => setShowModal(false)}>Cancel</button>
         </div>
       )}
-      <ToastContainer /> {/* Toastify container */}
+      <ToastContainer />
     </div>
   );
 }
