@@ -6,11 +6,11 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, firestore } from '../../../utils/firebase'; // Adjust the path based on your project structure
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
-import router from 'next/router';
+// import router from 'next/router';
 import { toast } from 'react-toastify';
 
 export default function SignIn() {
-  // const router = useRouter();
+  const router = useRouter();
   const [loading, setLoading] = useState<boolean>(false);
   const emailRef = useRef<HTMLInputElement | any>(null);
   const passwordRef = useRef<HTMLInputElement | any>(null);

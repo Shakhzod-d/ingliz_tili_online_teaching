@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-// import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -9,8 +9,7 @@ import { addDays } from 'date-fns';
 import { db } from '../utils/firebase';
 import { collection, onSnapshot, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import router from 'next/router';
+// import router from '';
 
 export default function TeacherList() {
   const [data, setData] = useState<any[]>([]);
@@ -21,7 +20,7 @@ export default function TeacherList() {
   const [comment, setComment] = useState<string>('');
   const [showModal, setShowModal] = useState<boolean>(false);
 
-  // const router = useRouter();
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
@@ -116,7 +115,7 @@ export default function TeacherList() {
       comment,
       lessonStatus: 'not started',
       isAccepted: 'new',
-      lessonId: selectedTeacher.lessons.length + 1,
+      lessonId: selectedTeacher?.lessons?.length ? selectedTeacher.lessons.length + 1 : 1,
       roomId: uuidv4(),
     };
 
