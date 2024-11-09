@@ -51,10 +51,12 @@ export default function TeacherList() {
   };
 
   const getAuthToken = () => {
-    return document.cookie
-      .split('; ')
-      .find((row) => row.startsWith('authToken='))
-      ?.split('=')[1];
+    if (typeof window !== 'undefined') {
+      return document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('authToken='))
+        ?.split('=')[1];
+    }
   };
 
   const getStudentId = () => {
@@ -206,7 +208,6 @@ export default function TeacherList() {
           <button onClick={() => setShowModal(false)}>Cancel</button>
         </div>
       )}
-      <ToastContainer />
     </div>
   );
 }
