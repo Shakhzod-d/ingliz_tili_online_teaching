@@ -346,8 +346,6 @@ export default function ProfileEdit() {
           </div>
         ))}
       </div>
-
-      <ToastContainer />
     </div>
   );
 }

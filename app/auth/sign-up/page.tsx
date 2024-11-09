@@ -6,7 +6,7 @@ import { useState, useRef } from 'react';
 import { auth, db } from '../../../utils/firebase'; // Adjust the path as needed
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import router from 'next/router';
+// import router from 'next/router';
 import { toast } from 'react-toastify';
 
 export default function Register() {
@@ -16,7 +16,7 @@ export default function Register() {
   const emailRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
-  // const router = useRouter();
+  const router = useRouter();
 
   const sendData = async (e: React.FormEvent) => {
     e.preventDefault();

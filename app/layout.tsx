@@ -5,6 +5,7 @@ import '@livekit/components-styles/prefabs';
 import axios from 'axios';
 import type { Metadata, Viewport } from 'next';
 import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export const metadata: Metadata = {
   title: {
