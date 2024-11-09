@@ -8,6 +8,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 // import router from 'next/router';
 import { toast } from 'react-toastify';
+import Navbar from '@/components/shared/navbar';
 
 export default function Register() {
   const [loading, setLoading] = useState<boolean>(false);
@@ -55,41 +56,44 @@ export default function Register() {
   };
 
   return (
-    <form onSubmit={sendData}>
-      <input type="text" placeholder="Enter your full name" required ref={nameRef} />
-      <input type="email" placeholder="Enter your email" required ref={emailRef} />
-      <input type="password" placeholder="Enter your password" required ref={passwordRef} />
+    <>
+      <Navbar />
+      <form onSubmit={sendData}>
+        <input type="text" placeholder="Enter your full name" required ref={nameRef} />
+        <input type="email" placeholder="Enter your email" required ref={emailRef} />
+        <input type="password" placeholder="Enter your password" required ref={passwordRef} />
 
-      <p>Who are you?</p>
-      <div className="select-role">
-        <label>
-          <input
-            type="radio"
-            name="role"
-            value="student"
-            checked={role === 'student'}
-            required
-            onChange={() => setRole('student')}
-          />
-          <span>Student</span>
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="role"
-            value="teacher"
-            checked={role === 'teacher'}
-            required
-            onChange={() => setRole('teacher')}
-          />
-          <span>Teacher</span>
-        </label>
-      </div>
+        <p>Who are you?</p>
+        <div className="select-role">
+          <label>
+            <input
+              type="radio"
+              name="role"
+              value="student"
+              checked={role === 'student'}
+              required
+              onChange={() => setRole('student')}
+            />
+            <span>Student</span>
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="role"
+              value="teacher"
+              checked={role === 'teacher'}
+              required
+              onChange={() => setRole('teacher')}
+            />
+            <span>Teacher</span>
+          </label>
+        </div>
 
-      <button type="submit" disabled={loading}>
-        {loading ? 'Registering...' : 'Register'}
-      </button>
-      <Link href="/auth/sign-in">Login</Link>
-    </form>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Registering...' : 'Register'}
+        </button>
+        <Link href="/auth/sign-in">Login</Link>
+      </form>
+    </>
   );
 }

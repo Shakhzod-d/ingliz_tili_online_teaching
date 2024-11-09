@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
 // import router from 'next/router';
 import { toast } from 'react-toastify';
+import Navbar from '@/components/shared/navbar';
 
 export default function SignIn() {
   const router = useRouter();
@@ -75,11 +76,14 @@ export default function SignIn() {
   };
 
   return (
-    <form onSubmit={fetchData}>
-      <input type="email" placeholder="Enter your email" required ref={emailRef} />
-      <input type="password" placeholder="Enter your password" required ref={passwordRef} />
-      <button disabled={loading}>Login</button>
-      <Link href={'/auth/sign-up'}>Register</Link>
-    </form>
+    <>
+      <Navbar />
+      <form onSubmit={fetchData}>
+        <input type="email" placeholder="Enter your email" required ref={emailRef} />
+        <input type="password" placeholder="Enter your password" required ref={passwordRef} />
+        <button disabled={loading}>Login</button>
+        <Link href={'/auth/sign-up'}>Register</Link>
+      </form>
+    </>
   );
 }

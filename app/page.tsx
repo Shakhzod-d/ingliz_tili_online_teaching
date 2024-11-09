@@ -9,16 +9,21 @@ import { addDays } from 'date-fns';
 import { db } from '../utils/firebase';
 import { collection, onSnapshot, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { toast, ToastContainer } from 'react-toastify';
+import Navbar from '@/components/shared/navbar';
+// import { newDate } from 'react-datepicker/dist/date_utils';
 // import router from '';
+
+const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function TeacherList() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | any>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [comment, setComment] = useState<string>('');
   const [showModal, setShowModal] = useState<boolean>(false);
+  const [isDisabled, setIsDisabled] = useState(false);
 
   const router = useRouter();
 
@@ -51,10 +56,12 @@ export default function TeacherList() {
   };
 
   const getAuthToken = () => {
-    return document.cookie
-      .split('; ')
-      .find((row) => row.startsWith('authToken='))
-      ?.split('=')[1];
+    if (typeof window !== 'undefined') {
+      return document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('authToken='))
+        ?.split('=')[1];
+    }
   };
 
   const getStudentId = () => {
@@ -109,8 +116,9 @@ export default function TeacherList() {
 
     const lessonData = {
       studentId,
-      day: selectedDate.toLocaleDateString('en-US', { weekday: 'long' }),
-      time: selectedTime,
+      // day: selectedDate.toLocaleDateString('en-US', { weekday: 'long' }),
+      // time: selectedTime,
+      time: new Date(`${selectedDate} ${selectedTime.split('-')[0]}`),
       status: 'new',
       comment,
       lessonStatus: 'not started',
@@ -118,6 +126,7 @@ export default function TeacherList() {
       lessonId: selectedTeacher?.lessons?.length ? selectedTeacher.lessons.length + 1 : 1,
       roomId: uuidv4(),
     };
+    setIsDisabled(true);
 
     try {
       const teacherRef = doc(db, 'users', selectedTeacher.id);
@@ -146,12 +155,21 @@ export default function TeacherList() {
       console.error('Error booking lesson:', error);
       toast.error('Error booking lesson');
     }
+    setIsDisabled(false);
   };
 
   if (loading) return <p>Loading...</p>;
 
+  function newDate(selectedDate: any) {
+    throw new Error('Function not implemented.');
+  }
+
+  console.log(daysOfWeek[new Date(selectedDate?.replaceAll('.', '/')).getDay()]);
+
   return (
     <div>
+      <Navbar />
+
       <h1 className="text-center">Welcome!</h1>
       <div className="cards">
         {data.map((item) => (
@@ -174,7 +192,10 @@ export default function TeacherList() {
             Select Date:
             <DatePicker
               selected={selectedDate}
-              onChange={(date) => setSelectedDate(date)}
+              onChange={(date: any) => (
+                setSelectedDate(new Date(date).toLocaleDateString()),
+                console.log(new Date(date).toLocaleDateString())
+              )}
               includeDates={getAvailableDates()}
               placeholderText="Select a date"
             />
@@ -185,8 +206,9 @@ export default function TeacherList() {
               <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
                 <option value="">Select Time</option>
                 {selectedTeacher.availableDays[
-                  selectedDate.toLocaleDateString('en-US', { weekday: 'long' })
-                ].map((time: { start: any; end: any }) => (
+                  // selectedDate.toLocaleDateString('en-US', { weekday: 'long' })
+                  daysOfWeek[new Date(selectedDate).getDay() - 1]
+                ]?.map((time: { start: any; end: any }) => (
                   <option key={`${time.start}-${time.end}`} value={`${time.start} - ${time.end}`}>
                     {`${time.start} - ${time.end}`}
                   </option>
@@ -202,11 +224,12 @@ export default function TeacherList() {
               placeholder="Write your comment here"
             />
           </label>
-          <button onClick={handleSubmit}>Submit</button>
+          <button onClick={(e) => handleSubmit()} disabled={isDisabled}>
+            Submit
+          </button>
           <button onClick={() => setShowModal(false)}>Cancel</button>
         </div>
       )}
-      <ToastContainer />
     </div>
   );
 }

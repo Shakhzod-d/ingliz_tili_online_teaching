@@ -7,6 +7,7 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { messaging } from '../../../../utils/firebase'; // Firebase Messaging konfiguratsiyangizni import qiling
 import Link from 'next/link';
 import { getToken } from 'firebase/messaging';
+import Navbar from '@/components/shared/navbar';
 
 export default function StudentDashboard() {
   const { id } = useParams(); // Bu 'id' foydalanuvchining IDsi
@@ -74,33 +75,36 @@ export default function StudentDashboard() {
   console.log(data);
 
   return (
-    <div>
-      <h1>Student Dashboard</h1>
+    <>
+      <Navbar />
+      <div>
+        <h1>Student Dashboard</h1>
 
-      <p>
-        Your name: <b>{data.name}</b>
-      </p>
+        <p>
+          Your name: <b>{data.name}</b>
+        </p>
 
-      <div className="cards">
-        {data.orders?.map(
-          (item: { isAccepted: string; roomId: ReactNode; lessonId: Key | null | undefined }) => (
-            <div key={item.lessonId} className="card">
-              <p>
-                Order ID: <b>{item.roomId}</b>
-              </p>
-              {item.isAccepted === 'accepted' ? (
-                <Link href={`/rooms/${item.roomId}`} target="_blank">
-                  Go to lesson room
-                </Link>
-              ) : item.isAccepted === 'canceled' ? (
-                <p>Order rad etildi!</p>
-              ) : (
-                <p>Order xali accept qilinmadi</p>
-              )}
-            </div>
-          ),
-        )}
+        <div className="cards">
+          {data.orders?.map(
+            (item: { isAccepted: string; roomId: ReactNode; lessonId: Key | null | undefined }) => (
+              <div key={item.lessonId} className="card">
+                <p>
+                  Order ID: <b>{item.roomId}</b>
+                </p>
+                {item.isAccepted === 'accepted' ? (
+                  <Link href={`/rooms/${item.roomId}`} target="_blank">
+                    Go to lesson room
+                  </Link>
+                ) : item.isAccepted === 'canceled' ? (
+                  <p>Order rad etildi!</p>
+                ) : (
+                  <p>Order xali accept qilinmadi</p>
+                )}
+              </div>
+            ),
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
