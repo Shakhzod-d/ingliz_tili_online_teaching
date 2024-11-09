@@ -1,9 +1,9 @@
-// Import the functions you need from the SDKs you need
+'use client';
 import { initializeApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { getMessaging, getToken, Messaging, onMessage } from 'firebase/messaging';
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -22,15 +22,19 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+// const analytics = getAnalytics(app);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 const firestore = getFirestore(app);
 
 export { firestore };
+let messaging: Messaging;
+// let requestForToken;
+// let onMessageListener;
 
-const messaging = getMessaging(app);
-
+if (typeof window !== 'undefined') {
+  messaging = getMessaging(app);
+}
 export const requestForToken = async (setTokenFound: (arg0: boolean) => void) => {
   try {
     const token = await getToken(messaging, { vapidKey: 'YOUR_PUBLIC_VAPID_KEY' });
@@ -47,7 +51,6 @@ export const requestForToken = async (setTokenFound: (arg0: boolean) => void) =>
     setTokenFound(false);
   }
 };
-
 export const onMessageListener = () =>
   new Promise((resolve) => {
     onMessage(messaging, (payload) => {
