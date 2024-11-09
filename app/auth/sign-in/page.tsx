@@ -45,9 +45,9 @@ export default function SignIn() {
       console.log(role);
 
       if (role === 'teacher') {
-        // router.push(`/dashboard/teacher/${user.uid}`);
+        router.push(`/dashboard/teacher/${user.uid}`);
       } else if (role === 'student') {
-        // router.push(`/dashboard/student/${user.uid}`);
+        router.push(`/dashboard/student/${user.uid}`);
       } else {
         toast.error("Role aniqlab bo'lmadi!!!");
       }

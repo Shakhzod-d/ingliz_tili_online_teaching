@@ -46,7 +46,7 @@ export default function Register() {
       await setDoc(doc(db, 'users', user.uid), userData);
 
       toast.success('Registration successful');
-      // router.push('/auth/sign-in');
+      router.push('/auth/sign-in');
     } catch (error: any) {
       toast.error(error.message);
     } finally {

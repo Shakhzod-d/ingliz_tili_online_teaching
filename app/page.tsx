@@ -93,7 +93,7 @@ export default function TeacherList() {
   const handleSubmit = async () => {
     const token = getAuthToken();
     if (!token) {
-      // router.push('/auth/sign-in');
+      router.push('/auth/sign-in');
       return;
     }
 
