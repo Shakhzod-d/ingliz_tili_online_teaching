@@ -325,7 +325,7 @@ export default function ProfileEdit() {
               {item.status === 'new' && <b style={{ color: 'green' }}>NEW</b>}
               <p>Student: {item.studentId}</p>
               {/* <p>Day: {item.day}</p> */}
-              <p>Time: {item.time}</p>
+              <p>Time: {item.time.seconds}</p>
               <p>Message: {item.comment}</p>
               <p>
                 Lesson Status: <b style={{ color: 'red' }}>{item.lessonStatus}</b>

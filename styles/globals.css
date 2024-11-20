@@ -12,6 +12,25 @@ button:disabled {
   opacity: 0.4;
 }
 
+.active-lessons {
+  display: flex;
+  justify-content: space-between;
+  max-width: 500px;
+  margin: 70px auto;
+}
+
+.aside {
+  @apply flex flex-col min-h-screen flex-[1] p-10;
+}
+
+.main {
+  @apply flex gap-10;
+}
+
+.main > div {
+  @apply flex flex-[4] flex-col;
+}
+
 html {
   color-scheme: dark;
   background-color: #111;
