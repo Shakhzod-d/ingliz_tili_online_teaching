@@ -2,6 +2,7 @@
 
 import { db } from '@/utils/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -53,7 +54,20 @@ export default function () {
           ))}
         </div>
       ) : (
-        ''
+        <div className="cards">
+          {data.orders
+            ?.filter((item: { isAccepted: string }) => item.isAccepted === 'accepted')
+            .map((item: any) => (
+              <div key={item.lessonId} className="card">
+                <p>
+                  Order ID: <b>{item.roomId}</b>
+                </p>{' '}
+                <Link href={`/rooms/${item.roomId}`} target="_blank">
+                  Go to lesson room
+                </Link>
+              </div>
+            ))}
+        </div>
       )}
     </div>
   );

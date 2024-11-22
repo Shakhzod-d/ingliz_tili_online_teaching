@@ -6,11 +6,14 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, firestore } from '../../../utils/firebase'; // Adjust the path based on your project structure
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
-// import router from 'next/router';
 import { toast } from 'react-toastify';
 import Navbar from '@/components/shared/navbar';
 
 export default function SignIn() {
+  if (typeof window === 'undefined') {
+    // Safe to use window here
+    return '';
+  }
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(false);
   const emailRef = useRef<HTMLInputElement | any>(null);
@@ -33,8 +36,8 @@ export default function SignIn() {
 
       if (typeof window !== 'undefined') {
         // Client tomonida `window` mavjudligini tekshirish
-        localStorage.setItem('role', role);
-        localStorage.setItem('studentId', user.uid);
+        window.localStorage.setItem('role', role);
+        window.localStorage.setItem('studentId', user.uid);
 
         // authToken va userRole cookielarini saqlash
         document.cookie = `authToken=${await user.getIdToken()}; path=/;`;

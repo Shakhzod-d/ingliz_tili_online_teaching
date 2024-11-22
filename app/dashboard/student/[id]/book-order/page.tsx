@@ -65,7 +65,7 @@ export default function TeacherList() {
   };
 
   const getStudentId = () => {
-    return localStorage.getItem('studentId');
+    return window.localStorage.getItem('studentId');
   };
 
   const sendNotificationToTeacher = async (teacherFcmToken: any) => {
@@ -97,6 +97,8 @@ export default function TeacherList() {
   };
 
   const handleSubmit = async () => {
+    console.log('db', doc(db, 'users', selectedTeacher?.id));
+
     const token = getAuthToken();
     if (!token) {
       router.push('/auth/sign-in');
@@ -118,7 +120,7 @@ export default function TeacherList() {
       studentId,
       // day: selectedDate.toLocaleDateString('en-US', { weekday: 'long' }),
       // time: selectedTime,
-      time: new Date(`${selectedDate} ${selectedTime.split('-')[0]}`),
+      time: `${selectedDate} ${selectedTime.split('-')[0]}`,
       status: 'new',
       comment,
       lessonStatus: 'not started',
@@ -160,14 +162,22 @@ export default function TeacherList() {
 
   if (loading) return <p>Loading...</p>;
 
-  function newDate(selectedDate: any) {
-    throw new Error('Function not implemented.');
-  }
+  // function newDate(selectedDate: any) {
+  //   throw new Error('Function not implemented.');
+  // }
 
-  console.log(daysOfWeek[new Date(selectedDate?.replaceAll('.', '/')).getDay()]);
+  // console.log(daysOfWeek[new Date(selectedDate?.replaceAll('.', '/')).getDay()]);
+  const parts = selectedDate?.split('.');
+
+  console.log('parts', daysOfWeek[new Date(selectedDate).getDay()]);
+
+  console.log('te', selectedTeacher?.availableDays);
 
   return (
     <div>
+      <Navbar />
+
+      <h1 className="text-center">Welcome!</h1>
       <div className="cards">
         {data.map((item) => (
           <div key={item.id} className="card">
@@ -189,10 +199,10 @@ export default function TeacherList() {
             Select Date:
             <DatePicker
               selected={selectedDate}
-              onChange={(date: any) => (
-                setSelectedDate(new Date(date).toLocaleDateString()),
-                console.log(new Date(date).toLocaleDateString())
-              )}
+              onChange={
+                (date: any) => setSelectedDate(String(date))
+                // console.log(new Date(date).toLocaleDateString())
+              }
               includeDates={getAvailableDates()}
               placeholderText="Select a date"
             />
@@ -203,8 +213,9 @@ export default function TeacherList() {
               <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
                 <option value="">Select Time</option>
                 {selectedTeacher.availableDays[
+                  // new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getDay()
                   // selectedDate.toLocaleDateString('en-US', { weekday: 'long' })
-                  daysOfWeek[new Date(selectedDate).getDay() - 1]
+                  daysOfWeek[new Date(selectedDate).getDay()]
                 ]?.map((time: { start: any; end: any }) => (
                   <option key={`${time.start}-${time.end}`} value={`${time.start} - ${time.end}`}>
                     {`${time.start} - ${time.end}`}

@@ -46,7 +46,9 @@ const Navbar = () => {
       ) : (
         <>
           <Link
-            href={`/dashboard/${localStorage.getItem('role')}/${localStorage.getItem('studentId')}`}
+            href={`/dashboard/${window.localStorage.getItem('role')}/${window.localStorage.getItem(
+              'studentId',
+            )}`}
           >
             Dashboard
           </Link>
