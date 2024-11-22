@@ -8,8 +8,10 @@ import { messaging } from '../../../../utils/firebase'; // Firebase Messaging ko
 import Link from 'next/link';
 import { getToken } from 'firebase/messaging';
 import Navbar from '@/components/shared/navbar';
+import { Timestamp } from 'firebase/firestore'; // Import for Firebase Timestamp
+import Button from '@/components/ui/logout-btn';
 
-export default function StudentDashboard() {
+export default function StudentDashboard({ children }: { children: React.ReactNode }) {
   const { id } = useParams(); // Bu 'id' foydalanuvchining IDsi
 
   const [data, setData] = useState<any>([]); // Foydalanuvchi va buyurtmalar ma'lumotlarini saqlash uchun
@@ -67,6 +69,37 @@ export default function StudentDashboard() {
     }
   };
 
+  // Helper function to compare times
+  const isLessonActiveOrApproaching = (lessonTime: any) => {
+    console.log('lessontime', lessonTime);
+
+    const currentTime = new Date();
+    const lessonStartTime = new Date(lessonTime.seconds * 1000);
+    const timeDifference = lessonStartTime.getTime() - currentTime.getTime();
+
+    console.log(currentTime, lessonStartTime, timeDifference);
+
+    return {
+      isActive: timeDifference <= 0, // Active if it's the same minute
+      isApproaching: timeDifference > 0 && timeDifference <= 1800000, // Approaching within 30 mins
+    };
+  };
+
+  useEffect(() => {
+    // Iterate over lessons to determine active or approaching lessons
+    data.orders?.forEach((lesson: { time: string; lessonId: string; roomId: string }) => {
+      const { isActive, isApproaching } = isLessonActiveOrApproaching(lesson.time);
+
+      if (isActive) {
+        // Show in Active Lessons UI
+        setActiveLessons((prev: any) => [...prev, lesson]);
+      }
+    });
+  }, [data.orders, fcmToken]);
+
+  // State to store active lessons
+  const [activeLessons, setActiveLessons] = useState<any>([]);
+
   // FCM token olish funksiyasini komponent yuklanganda chaqirish
   useEffect(() => {
     requestPermission();
@@ -76,34 +109,24 @@ export default function StudentDashboard() {
 
   return (
     <>
-      <Navbar />
-      <div>
+      <div className="lessons">
         <h1>Student Dashboard</h1>
-
         <p>
           Your name: <b>{data.name}</b>
         </p>
-
-        <div className="cards">
-          {data.orders?.map(
-            (item: { isAccepted: string; roomId: ReactNode; lessonId: Key | null | undefined }) => (
-              <div key={item.lessonId} className="card">
-                <p>
-                  Order ID: <b>{item.roomId}</b>
-                </p>
-                {item.isAccepted === 'accepted' ? (
-                  <Link href={`/rooms/${item.roomId}`} target="_blank">
-                    Go to lesson room
-                  </Link>
-                ) : item.isAccepted === 'canceled' ? (
-                  <p>Order rad etildi!</p>
-                ) : (
-                  <p>Order xali accept qilinmadi</p>
-                )}
+        ){/* Active Lessons Section */}
+        {activeLessons.length > 0 && (
+          <div className="active-lessons">
+            <h2>Active Lessons</h2>
+            {activeLessons.map((lesson: any) => (
+              <div key={lesson.lessonId}>
+                <Link href={`/rooms/${lesson.roomId}`} target="_blank">
+                  Join Lesson
+                </Link>
               </div>
-            ),
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

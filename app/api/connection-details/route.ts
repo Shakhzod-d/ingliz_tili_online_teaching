@@ -1,13 +1,28 @@
 import { randomString } from '@/lib/client-utils';
 import { ConnectionDetails } from '@/lib/types';
+import { db } from '@/utils/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 import { AccessToken, AccessTokenOptions, VideoGrant } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_KEY = process.env.LIVEKIT_API_KEY || 'APIvDxJrJtA2mqn';
-const API_SECRET = process.env.LIVEKIT_API_SECRET || 'fB02fZZINPTEVYt76DlQSDfYe2flUNVDvWBXefkHw4NH';
-const LIVEKIT_URL = process.env.LIVEKIT_URL;
+let API_KEY = '';
+let API_SECRET = '';
+let LIVEKIT_URL = '';
 
 export async function GET(request: NextRequest) {
+  try {
+    const currentCollection = collection(db, 'current');
+    const snapshot = await getDocs(currentCollection);
+
+    if (!snapshot.empty) {
+      const currentData = snapshot.docs[0].data();
+      API_KEY = currentData.a;
+      API_SECRET = currentData.b;
+      LIVEKIT_URL = currentData.c;
+    } else {
+      throw new Error('No documents found in the "current" collection.');
+    }
+  } catch (error) {}
   try {
     // Parse query parameters
     const roomName = request.nextUrl.searchParams.get('roomName');

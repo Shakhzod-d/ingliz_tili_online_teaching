@@ -6,7 +6,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { v4 as uuidv4 } from 'uuid';
 import { addDays } from 'date-fns';
-import { db } from '../utils/firebase';
+import { db } from '../../../../../utils/firebase';
 import { collection, onSnapshot, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { toast, ToastContainer } from 'react-toastify';
 import Navbar from '@/components/shared/navbar';
@@ -97,6 +97,8 @@ export default function TeacherList() {
   };
 
   const handleSubmit = async () => {
+    console.log('db', doc(db, 'users', selectedTeacher?.id));
+
     const token = getAuthToken();
     if (!token) {
       router.push('/auth/sign-in');
@@ -134,7 +136,7 @@ export default function TeacherList() {
         lessons: arrayUnion(lessonData),
         notifications: arrayUnion({
           message: `New lesson order from student ID: ${studentId}`,
-          // timestamp: new Date().toISOString(),
+          timestamp: new Date().toISOString(),
         }),
       });
 
@@ -145,9 +147,6 @@ export default function TeacherList() {
 
       const teacherSnapshot = await getDoc(teacherRef);
       const teacherData = teacherSnapshot.data();
-
-      console.log(teacherData?.fcmToken);
-
       if (teacherData?.fcmToken) {
         await sendNotificationToTeacher(teacherData.fcmToken);
       }
